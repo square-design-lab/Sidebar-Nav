@@ -85,6 +85,7 @@
       fontSize: 0,             // 0 inherits the site navigation font size
       logoWidth: 0,            // px; 0 leaves the logo at its natural size
       socialGap: 16,
+      actionGap: 16,           // between login / cart / social in the icon row
       border: true,
       borderColor: '',         // '' derives from the text colour
       borderWidth: 1,
@@ -138,7 +139,7 @@
     if (!name || name === 'none' || !ICONS[name]) return null;
     var s = document.createElement('span');
     s.className = 'sdlsn__icon';
-    s.setAttribute('data-icon', name);
+    s.setAttribute('data-sdlsn-icon', name);
     s.setAttribute('aria-hidden', 'true');
     s.innerHTML = ICONS[name];
     return s;
@@ -437,6 +438,7 @@
     r.setProperty('--sdlsn-icon-size', cfg.submenu.iconSize + 'px');
     r.setProperty('--sdlsn-sub-scale', String(cfg.submenu.subScale));
     r.setProperty('--sdlsn-social-gap', s.socialGap + 'px');
+    r.setProperty('--sdlsn-action-gap', s.actionGap + 'px');
     r.setProperty('--sdlsn-border-w', s.borderWidth + 'px');
     r.setProperty('--sdlsn-border-c', t.border);
     r.setProperty('--sdlsn-bg', t.bg);

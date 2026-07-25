@@ -35,6 +35,7 @@
 
 html.sdlsn-on #header,
 html.sdlsn-on .header {
+  box-sizing: border-box;
   position: fixed !important;
   top: var(--sdlsn-top) !important;
   bottom: 0 !important;
@@ -389,7 +390,16 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   transition: transform var(--sdlsn-dur) var(--sdlsn-ease);
 }
 
+/* Squarespace ships `[data-icon]::before{content:attr(data-icon)}` for its own
+   icon system. Our attribute is namespaced, but generated content on this span
+   would still steal the SVG's width, so rule it out. */
+.sdlsn__icon::before,
+.sdlsn__icon::after {
+  content: none !important;
+}
+
 .sdlsn__icon svg {
+  flex: none;
   width: 100%;
   height: 100%;
   display: block;
@@ -405,15 +415,15 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   transition: transform var(--sdlsn-dur) var(--sdlsn-ease), opacity var(--sdlsn-dur) var(--sdlsn-ease);
 }
 
-[aria-expanded="true"] > .sdlsn__icon[data-icon="caret"] {
+[aria-expanded="true"] > .sdlsn__icon[data-sdlsn-icon="caret"] {
   transform: rotate(180deg);
 }
 
-[aria-expanded="true"] > .sdlsn__icon[data-icon="arrow"] {
+[aria-expanded="true"] > .sdlsn__icon[data-sdlsn-icon="arrow"] {
   transform: rotate(90deg);
 }
 
-[aria-expanded="true"] > .sdlsn__icon[data-icon="plus"] .sdlsn-bar-v {
+[aria-expanded="true"] > .sdlsn__icon[data-sdlsn-icon="plus"] .sdlsn-bar-v {
   transform: scaleY(0);
   opacity: 0;
 }
@@ -462,7 +472,7 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
+  gap: var(--sdlsn-action-gap, 16px);
   justify-content: var(--sdlsn-justify);
   flex: none;
 }
@@ -477,6 +487,7 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   display: flex;
   align-items: center;
   justify-content: var(--sdlsn-justify);
+  flex: 0 0 auto;
   max-width: 100%;
 }
 

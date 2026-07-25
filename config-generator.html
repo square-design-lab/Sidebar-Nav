@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SDL Sidebar Nav — Config Generator</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#16181d; --muted:#6b7280; --line:#e3e6ea;
+    --accent:#111; --accent-hover:#2b2f36; --accent-soft:#eef0f3; --radius:8px; --header-h:56px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  button,input,select,textarea{font:inherit;color:inherit}
+
+  .app{display:grid;grid-template-columns:390px 1fr;height:100vh}
+  @media(max-width:960px){.app{grid-template-columns:1fr;height:auto}}
+
+  .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  .side-head{height:var(--header-h);padding:0 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;flex:none}
+  .side-head h1{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .badge{padding:2px 7px;border-radius:99px;background:var(--accent);color:#fff;font-size:11px;font-weight:600}
+  .side-body{overflow-y:auto;padding:6px 0 60px;flex:1}
+
+  .grp{border-bottom:1px solid var(--line)}
+  .grp-head{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border:0;background:none;font-weight:600;cursor:pointer;text-align:left}
+  .grp-head svg{transition:transform .18s;flex:none}
+  .grp.closed .grp-head svg{transform:rotate(-90deg)}
+  .grp-body{padding:2px 18px 18px;display:grid;gap:13px}
+  .grp.closed .grp-body{display:none}
+
+  .row{display:grid;gap:5px}
+  .row label{font-size:12.5px;font-weight:550;color:#3a3f47}
+  .row input[type=text],.row input[type=number],.row select,.row textarea{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .row input[type=color]{width:100%;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .row input:focus,.row select:focus,.row textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .hint{font-size:11.5px;color:var(--muted)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .note{background:var(--accent-soft);border-radius:7px;padding:10px 12px;font-size:12.5px;color:#3a3f47}
+
+  .tog{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .tog label{font-size:13px;font-weight:500}
+  .sw{position:relative;width:38px;height:22px;flex:none}
+  .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+  .sw span{position:absolute;inset:0;background:#d3d7dd;border-radius:99px;transition:.18s}
+  .sw span:after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.18s}
+  .sw input:checked + span{background:var(--accent)}
+  .sw input:checked + span:after{transform:translateX(16px)}
+
+  /* element placement rows */
+  .plist{display:grid;gap:8px}
+  .pitem{display:grid;grid-template-columns:1fr 132px;gap:8px;align-items:center;
+         border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;background:#fbfcfd}
+  .pitem.off{opacity:.62}
+  .pitem .nm{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;min-width:0}
+  .pitem .nm svg{flex:none;color:var(--muted)}
+  .pitem select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;width:100%}
+
+  /* segmented control */
+  .seg{display:flex;background:#f2f4f6;border-radius:7px;padding:2px;gap:2px}
+  .seg button{flex:1;border:0;background:none;padding:7px 4px;border-radius:5px;font-size:12.5px;font-weight:550;
+              color:var(--muted);cursor:pointer;transition:.18s;white-space:nowrap}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+  .main{display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:var(--header-h);padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);
+          display:flex;align-items:center;justify-content:space-between;gap:14px;flex:none}
+  .tabs{display:flex;gap:2px}
+  .tab{padding:7px 14px;border:0;background:none;cursor:pointer;border-radius:6px;font-weight:550;color:var(--muted)}
+  .tab.on{background:var(--accent-soft);color:var(--ink)}
+  .topbar-right{display:flex;align-items:center;gap:10px}
+  .devtog{background:#f2f2f2;padding:2px;border-radius:6px;display:flex}
+  .devtog button{border:0;background:transparent;padding:5px 11px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:4px;transition:.2s}
+  .devtog button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .copy-btn{background:var(--accent);color:#fff;border:0;padding:9px 18px;border-radius:7px;font-weight:600;font-size:13px;
+            cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .1s,background .2s;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .copy-btn:hover{background:var(--accent-hover)}
+  .copy-btn:active{transform:scale(.97)}
+  .copy-btn.copied{background:#0ea5e9}
+
+  .pane{flex:1;overflow:auto;padding:20px}
+  .pane[hidden]{display:none}
+
+  .urlbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:7px 12px;background:#fff;
+          border:1px solid var(--line);border-radius:99px;font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .urlbar b{color:var(--ink);font-weight:600}
+  .pv-note{font-size:12px;color:var(--muted);margin:0 0 12px}
+  .pv-wrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .pv-wrap.mobile{max-width:430px;margin:0 auto}
+
+  pre{margin:0;padding:18px;background:#12141a;color:#e6e9ef;border-radius:10px;overflow:auto;
+      font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+  .steps{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+  .steps h3{margin:0 0 10px;font-size:14px}
+  .steps ol{margin:0;padding-left:20px}
+  .steps li{margin-bottom:7px}
+  code.inl{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:12.5px}
+
+  /* ======================================================================
+     PREVIEW — mirrors sidebarNav.css. The sidebar is sticky inside the
+     scroll frame rather than fixed to the viewport, so it behaves the same
+     way (content moves, sidebar does not) inside a 620px box.
+     ====================================================================== */
+  .pv-frame{position:relative;height:620px;overflow:auto;background:var(--pv-page-bg,#fffef7)}
+  .pv-stage{display:flex;align-items:flex-start;min-height:100%}
+  .pv-stage.right{flex-direction:row-reverse}
+
+  .pv-side{position:sticky;top:0;height:620px;flex:none;box-sizing:border-box;
+           width:var(--pv-w,280px);background:var(--pv-bg,#fffef7);color:var(--pv-fg,#151414);
+           display:flex;flex-direction:column;overflow-y:auto;
+           padding:var(--pv-pad-y,32px) var(--pv-pad-x,32px);gap:var(--pv-zone-gap,26px);
+           text-align:var(--pv-align,left);font-family:Inter,-apple-system,sans-serif}
+  .pv-side.bd{border-right:var(--pv-bw,1px) solid var(--pv-bc,rgba(0,0,0,.14))}
+  .pv-stage.right .pv-side.bd{border-right:0;border-left:var(--pv-bw,1px) solid var(--pv-bc,rgba(0,0,0,.14))}
+
+  .pv-zone{display:flex;flex-direction:column;gap:var(--pv-zone-gap,26px);flex:none}
+  .pv-zone.mid{flex:1 1 auto;min-height:0;justify-content:center}
+  .pv-zone.top:empty,.pv-zone.bottom:empty{display:none}
+
+  .pv-brand{display:flex;justify-content:var(--pv-just,flex-start)}
+  .pv-brand span{font-family:Gloock,Georgia,serif;font-size:17px;line-height:1.3}
+
+  .pv-nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--pv-gap,14px)}
+  .pv-nav li{margin:0}
+  .pv-row{display:flex;align-items:center;gap:.55em;width:100%;justify-content:var(--pv-just,flex-start);
+          border:0;background:none;padding:0;margin:0;cursor:pointer;color:inherit;text-align:inherit;
+          font-size:var(--pv-fs,13.45px);letter-spacing:-.03em;line-height:1.35;font-family:inherit}
+  .pv-side[data-iconpos="edge"] .pv-row.folder{justify-content:space-between;gap:1em}
+  .pv-side[data-iconpos="left"] .pv-row.folder .pv-ic{order:-1}
+  .pv-row:hover{opacity:var(--pv-hop,.6)}
+  .pv-side.hov-underline .pv-row:hover{opacity:1;text-decoration:underline;text-underline-offset:.22em}
+  .pv-side.hov-none .pv-row:hover{opacity:1}
+  .pv-row.cur{opacity:1}
+  .pv-side.act-bold .pv-row.cur{font-weight:700}
+  .pv-side.act-underline .pv-row.cur{text-decoration:underline;text-underline-offset:.22em}
+  .pv-side.act-dot .pv-row.cur .pv-lbl::before{content:"";display:inline-block;width:.4em;height:.4em;
+          margin-right:.55em;border-radius:50%;background:currentColor;vertical-align:middle}
+  .pv-side.divs .pv-nav li + li{border-top:1px solid var(--pv-bc,rgba(0,0,0,.14));padding-top:var(--pv-gap,14px)}
+
+  .pv-ic{display:inline-flex;flex:none;width:var(--pv-ics,13px);height:var(--pv-ics,13px);transition:transform .28s cubic-bezier(.22,.61,.36,1)}
+  .pv-ic svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .pv-ic .bv{transform-origin:center;transition:transform .28s cubic-bezier(.22,.61,.36,1),opacity .28s}
+  [aria-expanded="true"] > .pv-ic[data-i="caret"]{transform:rotate(180deg)}
+  [aria-expanded="true"] > .pv-ic[data-i="arrow"]{transform:rotate(90deg)}
+  [aria-expanded="true"] > .pv-ic[data-i="plus"] .bv{transform:scaleY(0);opacity:0}
+
+  .pv-panel{overflow:hidden;transition:height .28s cubic-bezier(.22,.61,.36,1)}
+  .pv-panel[hidden]{display:none}
+  .pv-sub{list-style:none;margin:0;display:flex;flex-direction:column;
+          gap:calc(var(--pv-gap,14px) * .62);padding:calc(var(--pv-gap,14px) * .78) 0 2px var(--pv-indent,16px)}
+  .pv-side[data-align="center"] .pv-sub,.pv-side[data-align="right"] .pv-sub{padding-left:0}
+  .pv-sub a{display:block;color:inherit;text-decoration:none;opacity:.72;
+            font-size:calc(var(--pv-fs,13.45px) * var(--pv-subscale,.92));letter-spacing:-.03em;line-height:1.35}
+
+  .pv-acts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--pv-agap,16px);justify-content:var(--pv-just,flex-start);flex:none}
+  .pv-social{display:flex;align-items:center;gap:var(--pv-sgap,16px)}
+  .pv-social svg{width:17px;height:17px;fill:currentColor;display:block}
+  .pv-cart{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+  .pv-cart svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .pv-login{font-size:13.45px;letter-spacing:-.03em}
+  .pv-cta{display:flex;justify-content:var(--pv-just,flex-start);width:100%}
+  .pv-cta a{border:1px solid currentColor;color:inherit;text-decoration:none;padding:9px 18px;
+            font-size:12.6px;letter-spacing:-.02em;white-space:nowrap}
+  .pv-side.ctafull .pv-cta a{width:100%;text-align:center}
+
+  .pv-content{flex:1 1 auto;min-width:0}
+  .pv-sec{padding:54px 40px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .pv-sec h2{font-family:Gloock,Georgia,serif;font-weight:400;margin:0 0 12px;font-size:30px;line-height:1.15;color:#151414}
+  .pv-sec p{margin:0;color:#4b4a48;font-size:14px;max-width:52ch}
+  .pv-hero{background:#111;color:#fff;min-height:300px;display:flex;align-items:center}
+  .pv-hero h2{color:#fff}
+  .pv-hero p{color:rgba(255,255,255,.72)}
+  .pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}
+  .pv-card{aspect-ratio:4/3;background:linear-gradient(135deg,#ecebe4,#dedcd2);border-radius:3px}
+
+  /* mobile preview — native header + overlay menu with accordion folders */
+  .pv-m{background:#fffef7;min-height:620px;position:relative;overflow:hidden;font-family:Inter,-apple-system,sans-serif}
+  .pv-mbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:relative;z-index:2;color:#151414}
+  .pv-mbar .b{font-family:Gloock,Georgia,serif;font-size:16px}
+  .pv-mbar .r{display:flex;align-items:center;gap:16px}
+  .pv-burger{width:22px;height:14px;position:relative;border:0;background:none;padding:0;cursor:pointer;color:inherit}
+  .pv-burger i{position:absolute;left:0;right:0;height:1px;background:currentColor;transition:.25s}
+  .pv-burger i:nth-child(1){top:0}
+  .pv-burger i:nth-child(2){top:50%}
+  .pv-burger i:nth-child(3){bottom:0}
+  .pv-m.open .pv-burger i:nth-child(1){top:50%;transform:rotate(45deg)}
+  .pv-m.open .pv-burger i:nth-child(2){opacity:0}
+  .pv-m.open .pv-burger i:nth-child(3){bottom:auto;top:50%;transform:rotate(-45deg)}
+  .pv-mmenu{position:absolute;inset:0;background:#fffef7;padding:66px 0 30px;overflow-y:auto;
+            opacity:0;visibility:hidden;transition:opacity .3s;color:#151414;z-index:1}
+  .pv-m.open .pv-mmenu{opacity:1;visibility:visible}
+  .pv-mitem{padding:11px 20px}
+  .pv-mitem > a,.pv-mtoggle{display:flex;align-items:center;gap:.6em;width:100%;border:0;background:none;padding:0;
+            margin:0;cursor:pointer;color:inherit;text-decoration:none;font:inherit;font-size:22px;
+            font-family:Gloock,Georgia,serif;line-height:1.25;text-align:left}
+  .pv-mitem[data-iconpos="edge"] .pv-mtoggle{justify-content:space-between;gap:1em}
+  .pv-mitem[data-iconpos="left"] .pv-mtoggle .pv-ic{order:-1}
+  .pv-mitem .pv-ic{width:var(--pv-mics,15px);height:var(--pv-mics,15px)}
+  .pv-msub{padding-left:var(--pv-mindent,18px)}
+  .pv-msub a{font-size:calc(22px * var(--pv-msubscale,.82));opacity:.72}
+  .pv-mfoot{padding:26px 20px 0;display:flex;flex-direction:column;gap:18px}
+  .pv-mhint{font-size:11.5px;color:var(--muted);text-align:center;padding:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="side">
+    <div class="side-head">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <h1>Sidebar Nav</h1><span class="badge">v1.0</span>
+    </div>
+    <div class="side-body">
+
+      <!-- LAYOUT -->
+      <section class="grp" data-g>
+        <button class="grp-head" onclick="tog(this)">Sidebar
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="grp-body">
+          <div class="row">
+            <label>Side of the screen</label>
+            <div class="seg" id="segSide">
+              <button class="on" data-v="left" onclick="setSeg('side',this)">Left</button>
+              <button data-v="right" onclick="setSeg('side',this)">Right</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Sidebar width</label>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+              <input type="number" id="width" value="280" min="1" oninput="sync()">
+              <select id="widthUnit" onchange="onUnit()">
+                <option value="px">px</option>
+                <option value="%">%</option>
+              </select>
+            </div>
+            <div class="hint" id="widthHint">Your page content is inset by this much, so nothing sits under the sidebar.</div>
+          </div>
+
+          <div class="row">
+            <label>Content alignment</label>
+            <div class="seg" id="segAlign">
+              <button class="on" data-v="left" onclick="setSeg('align',this)">Left</button>
+              <button data-v="center" onclick="setSeg('align',this)">Center</button>
+              <button data-v="right" onclick="setSeg('align',this)">Right</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Sidebar active above (px)</label>
+            <input type="number" id="breakpoint" value="767" min="320" oninput="sync()">
+            <div class="hint">767 matches where Squarespace 7.1 switches to its own mobile header. At or below this width the native header is used untouched.</div>
+          </div>
+
+          <div class="tog"><label>Clip sideways overflow</label>
+            <span class="sw"><input type="checkbox" id="clipOverflow" checked onchange="sync()"><span></span></span></div>
+          <div class="hint">Stops the horizontal scrollbar that full-bleed sections sized in <code class="inl">vw</code> can cause. Turn off if a section needs to overflow.</div>
+        </div>
+      </section>
+
+      <!-- PLACEMENT -->
+      <section class="grp" data-g>
+        <button class="grp-head" onclick="tog(this)">Placement
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="grp-body">
+          <p class="hint">The logo always leads the column. Everything else picks a band: under the logo, vertically centred, or pinned to the bottom.</p>
+
+          <div class="row">
+            <label>Navigation links</label>
+            <div class="seg" id="segNav">
+              <button class="on" data-v="top" onclick="setSeg('navPosition',this)">Below logo</button>
+              <button data-v="center" onclick="setSeg('navPosition',this)">Centered</button>
+              <button data-v="bottom" onclick="setSeg('navPosition',this)">Bottom</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Other header elements</label>
+            <div class="plist" id="placeList"></div>
+            <div class="hint">Only elements your header actually has will appear on the site — the rest are ignored. Within a band the order is logo, nav, button, then the icon row.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBMENU -->
+      <section class="grp" data-g>
+        <button class="grp-head" onclick="tog(this)">Submenus (desktop)
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="grp-body">
+          <div class="note">Folders become click-to-open accordions instead of the floating dropdown Squarespace uses. Nothing opens on hover, so a folder never expands by accident.</div>
+
+          <div class="row">
+            <label>Icon</label>
+            <div class="seg" id="segIcon">
+              <button class="on" data-v="caret" onclick="setSeg('submenu.icon',this)">Caret</button>
+              <button data-v="plus" onclick="setSeg('submenu.icon',this)">Plus</button>
+              <button data-v="arrow" onclick="setSeg('submenu.icon',this)">Arrow</button>
+              <button data-v="none" onclick="setSeg('submenu.icon',this)">None</button>
+            </div>
+            <div class="hint" id="iconHint"></div>
+          </div>
+
+          <div class="row" id="rowIconPos">
+            <label>Icon position</label>
+            <div class="seg" id="segIconPos">
+              <button class="on" data-v="edge" onclick="setSeg('submenu.iconPosition',this)">Far edge</button>
+              <button data-v="inline" onclick="setSeg('submenu.iconPosition',this)">After label</button>
+              <button data-v="left" onclick="setSeg('submenu.iconPosition',this)">Before label</button>
+            </div>
+          </div>
+
+          <div class="two">
+            <div class="row" id="rowIconSize"><label>Icon size (px)</label>
+              <input type="number" id="iconSize" value="13" min="6" max="40" oninput="sync()"></div>
+            <div class="row"><label>Indent (px)</label>
+              <input type="number" id="indent" value="16" min="0" oninput="sync()"></div>
+          </div>
+
+          <div class="two">
+            <div class="row"><label>Sub-item size</label>
+              <input type="number" id="subScale" value="0.92" min="0.6" max="1.2" step="0.02" oninput="sync()">
+              <div class="hint">× the nav size</div></div>
+            <div class="row"><label>Slide speed (ms)</label>
+              <input type="number" id="duration" value="280" min="0" max="1200" step="20" oninput="sync()"></div>
+          </div>
+
+          <div class="tog"><label>One folder open at a time</label>
+            <span class="sw"><input type="checkbox" id="singleOpen" onchange="sync()"><span></span></span></div>
+          <div class="tog"><label>Open the folder holding this page</label>
+            <span class="sw"><input type="checkbox" id="openActive" checked onchange="sync()"><span></span></span></div>
+          <div class="hint">Visitors landing on a sub-page can see where they are without hunting for it.</div>
+        </div>
+      </section>
+
+      <!-- MOBILE -->
+      <section class="grp closed" data-g>
+        <button class="grp-head" onclick="tog(this)">Mobile menu
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="grp-body">
+          <div class="note">On mobile the header stays exactly as Squarespace built it. The only change is folders: instead of sliding the whole menu across to a sub-page with a Back button, they expand in place.</div>
+
+          <div class="tog"><label><b>Accordion folders on mobile</b></label>
+            <span class="sw"><input type="checkbox" id="mEnabled" checked onchange="sync()"><span></span></span></div>
+
+          <div id="mBody" style="display:grid;gap:13px">
+            <div class="row">
+              <label>Icon</label>
+              <div class="seg" id="segMIcon">
+                <button class="on" data-v="caret" onclick="setSeg('mobile.icon',this)">Caret</button>
+                <button data-v="plus" onclick="setSeg('mobile.icon',this)">Plus</button>
+                <button data-v="arrow" onclick="setSeg('mobile.icon',this)">Arrow</button>
+                <button data-v="none" onclick="setSeg('mobile.icon',this)">None</button>
+              </div>
+            </div>
+            <div class="row" id="rowMIconPos">
+              <label>Icon position</label>
+              <div class="seg" id="segMIconPos">
+                <button class="on" data-v="edge" onclick="setSeg('mobile.iconPosition',this)">Far edge</button>
+                <button data-v="inline" onclick="setSeg('mobile.iconPosition',this)">After label</button>
+                <button data-v="left" onclick="setSeg('mobile.iconPosition',this)">Before label</button>
+              </div>
+            </div>
+            <div class="two">
+              <div class="row" id="rowMIconSize"><label>Icon size (px)</label>
+                <input type="number" id="mIconSize" value="15" min="6" max="40" oninput="sync()"></div>
+              <div class="row"><label>Indent (px)</label>
+                <input type="number" id="mIndent" value="18" min="0" oninput="sync()"></div>
+            </div>
+            <div class="two">
+              <div class="row"><label>Sub-item size</label>
+                <input type="number" id="mSubScale" value="0.82" min="0.5" max="1.2" step="0.02" oninput="sync()">
+                <div class="hint">× the menu size</div></div>
+              <div class="row"><label>Slide speed (ms)</label>
+                <input type="number" id="mDuration" value="280" min="0" max="1200" step="20" oninput="sync()"></div>
+            </div>
+            <div class="tog"><label>One folder open at a time</label>
+              <span class="sw"><input type="checkbox" id="mSingleOpen" onchange="sync()"><span></span></span></div>
+            <div class="tog"><label>Open the folder holding this page</label>
+              <span class="sw"><input type="checkbox" id="mOpenActive" onchange="sync()"><span></span></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STYLING -->
+      <section class="grp closed" data-g>
+        <button class="grp-head" onclick="tog(this)">Styling
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="grp-body">
+          <div class="note">The sidebar is your real Squarespace header, restyled — so the nav font, logo, button and icons already match your theme. Only override what you want to differ.</div>
+
+          <div class="tog"><label>Background follows site</label>
+            <span class="sw"><input type="checkbox" id="inhBg" checked onchange="sync()"><span></span></span></div>
+          <div class="row" id="rowBg" hidden><label>Background</label>
+            <input type="color" id="background" value="#fffef7" oninput="sync()"></div>
+          <div class="hint" id="bgHint">A full-height column needs a solid fill. Left on, the plugin reads your header's own background, then your site background.</div>
+
+          <div class="tog"><label>Text colour follows header</label>
+            <span class="sw"><input type="checkbox" id="inhFg" checked onchange="sync()"><span></span></span></div>
+          <div class="row" id="rowFg" hidden><label>Text colour</label>
+            <input type="color" id="textColor" value="#151414" oninput="sync()"></div>
+
+          <div class="two">
+            <div class="row"><label>Padding sides (px)</label><input type="number" id="paddingX" value="32" min="0" oninput="sync()"></div>
+            <div class="row"><label>Padding top/bottom (px)</label><input type="number" id="paddingY" value="32" min="0" oninput="sync()"></div>
+          </div>
+          <div class="two">
+            <div class="row"><label>Space between blocks (px)</label><input type="number" id="zoneGap" value="26" min="0" oninput="sync()"></div>
+            <div class="row"><label>Space between links (px)</label><input type="number" id="itemGap" value="14" min="0" oninput="sync()"></div>
+          </div>
+          <div class="two">
+            <div class="row"><label>Nav size (px)</label><input type="number" id="fontSize" value="0" min="0" oninput="sync()">
+              <div class="hint">0 = your site's nav size</div></div>
+            <div class="row"><label>Logo width (px)</label><input type="number" id="logoWidth" value="0" min="0" oninput="sync()">
+              <div class="hint">0 = leave as is</div></div>
+          </div>
+          <div class="two">
+            <div class="row"><label>Social icon spacing (px)</label>
+              <input type="number" id="socialGap" value="16" min="0" oninput="sync()"></div>
+            <div class="row"><label>Icon row spacing (px)</label>
+              <input type="number" id="actionGap" value="16" min="0" oninput="sync()">
+              <div class="hint">Between login, cart and social</div></div>
+          </div>
+
+          <div class="tog"><label>Edge border</label>
+            <span class="sw"><input type="checkbox" id="border" checked onchange="sync()"><span></span></span></div>
+          <div class="two" id="rowBorder">
+            <div class="row"><label>Border width (px)</label><input type="number" id="borderWidth" value="1" min="0" max="12" oninput="sync()"></div>
+            <div class="row"><label>Border colour</label><input type="color" id="borderColor" value="#151414" oninput="sync()"></div>
+          </div>
+          <div class="tog" id="rowBorderInh"><label>Border colour follows text</label>
+            <span class="sw"><input type="checkbox" id="inhBorderColor" checked onchange="sync()"><span></span></span></div>
+
+          <div class="tog"><label>Hairline between links</label>
+            <span class="sw"><input type="checkbox" id="dividers" onchange="sync()"><span></span></span></div>
+
+          <div class="row">
+            <label>Hover effect</label>
+            <div class="seg" id="segHover">
+              <button class="on" data-v="opacity" onclick="setSeg('styles.hover',this)">Fade</button>
+              <button data-v="underline" onclick="setSeg('styles.hover',this)">Underline</button>
+              <button data-v="none" onclick="setSeg('styles.hover',this)">None</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Current page</label>
+            <div class="seg" id="segActive">
+              <button class="on" data-v="bold" onclick="setSeg('styles.active',this)">Bold</button>
+              <button data-v="underline" onclick="setSeg('styles.active',this)">Underline</button>
+              <button data-v="dot" onclick="setSeg('styles.active',this)">Dot</button>
+              <button data-v="none" onclick="setSeg('styles.active',this)">None</button>
+            </div>
+          </div>
+
+          <div class="tog"><label>Button fills the width</label>
+            <span class="sw"><input type="checkbox" id="ctaFullWidth" checked onchange="sync()"><span></span></span></div>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="tabs">
+        <button class="tab on" onclick="setTab(0)">Preview</button>
+        <button class="tab" onclick="setTab(1)">Install code</button>
+        <button class="tab" onclick="setTab(2)">Guide</button>
+      </div>
+      <div class="topbar-right">
+        <div class="devtog">
+          <button id="devDesktop" class="on" onclick="setDev('desktop')">Desktop</button>
+          <button id="devMobile" onclick="setDev('mobile')">Mobile</button>
+        </div>
+        <button class="copy-btn" id="copyBtn" onclick="copyCode()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          <span>Copy Code</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="pane" id="pane0">
+      <div class="urlbar" id="urlBar"></div>
+      <p class="pv-note" id="pvNote"></p>
+      <div class="pv-wrap" id="pvWrap"><div id="preview"></div></div>
+    </div>
+
+    <div class="pane" id="pane1" hidden><pre id="code"></pre></div>
+
+    <div class="pane" id="pane2" hidden>
+      <div class="steps">
+        <h3>Where this goes</h3>
+        <ol>
+          <li>Copy the code with the button in the header.</li>
+          <li>In Squarespace, open <strong>Settings → Advanced → Code Injection</strong> and paste it into <strong>Header</strong>. The sidebar is site-wide, so it belongs there rather than on one page.</li>
+          <li>Save, then open your live site in a new tab.</li>
+        </ol>
+        <p class="hint" style="margin:10px 0 0">Pasting into <em>Footer</em> works too, but the native top bar flashes before the sidebar takes over.</p>
+      </div>
+      <div class="steps">
+        <h3>Good to know</h3>
+        <ol>
+          <li><strong>Your header is the sidebar.</strong> Nothing is copied or rebuilt — the real logo, cart, social icons and button are moved into the column, so the live cart count keeps updating and your theme's styling still applies.</li>
+          <li><strong>Nothing to list.</strong> Every nav link and folder is read from your header as-is. Add a page in Squarespace and it appears in the sidebar.</li>
+          <li><strong>Mobile is untouched.</strong> Below the breakpoint the native header comes back exactly as Squarespace rendered it — only folders open as accordions.</li>
+          <li><strong>Folders open on click, never hover.</strong> Keyboard users get a real <code class="inl">aria-expanded</code> button, Escape closes an open folder, and the current page is marked with <code class="inl">aria-current</code>.</li>
+          <li><strong>Reduced motion is respected.</strong> Visitors who ask for it get instant open/close instead of the slide.</li>
+          <li>An announcement bar is lifted to the top of the page so it still spans the full width.</li>
+          <li>The plugin stands down inside the Squarespace editor so you can still edit your header.</li>
+        </ol>
+      </div>
+      <div class="steps">
+        <h3>If something looks off</h3>
+        <ol>
+          <li><strong>The sidebar appears over a mobile header.</strong> Your site switches to its mobile header wider than 767px — raise <em>Sidebar active above</em> to match.</li>
+          <li><strong>A logo is too wide.</strong> Set <em>Logo width</em> under Styling; the image scales down and keeps its ratio.</li>
+          <li><strong>A section pokes out sideways.</strong> Leave <em>Clip sideways overflow</em> on.</li>
+          <li><strong>Nav links look cramped.</strong> Raise <em>Space between links</em>, or lower <em>Nav size</em>.</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ================= sample header (mirrors the live test site) ================= */
+const NAV = [
+  { label:'Plugins', folder:true, children:['Summary Block','List Section','Buttons','Map','Slider','Timeline','Gallery','Background'] },
+  { label:'Store' }, { label:'Blog', current:true }, { label:'Events' },
+  { label:'Portfolio' }, { label:'Plugin' }
+];
+
+const SOCIAL = [
+  '<svg viewBox="0 0 24 24"><path d="M15.1 8.3h-2V7c0-.6.4-.8.7-.8h1.3V4h-1.8c-2 0-2.5 1.5-2.5 2.5v1.8H9.5v2.3h1.3V20h2.3v-9.4h1.7l.3-2.3z"/></svg>',
+  '<svg viewBox="0 0 24 24"><path d="M20 6.5c-.6.3-1.3.5-2 .6.6-.4 1.1-1 1.3-1.8-.6.4-1.3.7-2.1.8a3.3 3.3 0 0 0-5.7 3C8.7 8.9 6.3 7.6 4.7 5.6a3.3 3.3 0 0 0 1 4.4c-.5 0-1-.2-1.5-.4a3.3 3.3 0 0 0 2.7 3.3c-.5.1-1 .2-1.5.1a3.3 3.3 0 0 0 3.1 2.3A6.6 6.6 0 0 1 4 16.7a9.3 9.3 0 0 0 14.4-8.3c.7-.5 1.2-1.2 1.6-1.9z"/></svg>',
+  '<svg viewBox="0 0 24 24"><path d="M12 6.9c-2.8 0-5.1 2.3-5.1 5.1S9.2 17.1 12 17.1s5.1-2.3 5.1-5.1S14.8 6.9 12 6.9zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6zM18.4 6.7a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0zM12 3.8c-2.2 0-2.5 0-3.3.05-.9 0-1.5.2-2 .4a3.3 3.3 0 0 0-1.2.8c-.4.4-.6.8-.8 1.2-.2.5-.3 1.1-.4 2C4.2 9.1 4.2 9.4 4.2 12s0 2.9.05 3.7c0 .9.2 1.5.4 2 .2.5.4.9.8 1.2.4.4.8.6 1.2.8.5.2 1.1.3 2 .4.8.05 1.1.05 3.3.05s2.5 0 3.3-.05c.9 0 1.5-.2 2-.4a3.3 3.3 0 0 0 1.2-.8c.4-.4.6-.8.8-1.2.2-.5.3-1.1.4-2 .05-.8.05-1.1.05-3.7s0-2.9-.05-3.7c0-.9-.2-1.5-.4-2a3.3 3.3 0 0 0-.8-1.2 3.3 3.3 0 0 0-1.2-.8c-.5-.2-1.1-.3-2-.4-.8-.05-1.1-.05-3.3-.05zm0 1.6c2.2 0 2.4 0 3.2.05.8 0 1.2.2 1.5.3.4.1.6.3.9.6.3.3.4.5.6.9.1.3.2.7.3 1.5.05.8.05 1 .05 3.2s0 2.4-.05 3.2c0 .8-.2 1.2-.3 1.5-.1.4-.3.6-.6.9-.3.3-.5.4-.9.6-.3.1-.7.2-1.5.3-.8.05-1 .05-3.2.05s-2.4 0-3.2-.05c-.8 0-1.2-.2-1.5-.3-.4-.1-.6-.3-.9-.6-.3-.3-.4-.5-.6-.9-.1-.3-.2-.7-.3-1.5-.05-.8-.05-1-.05-3.2s0-2.4.05-3.2c0-.8.2-1.2.3-1.5.1-.4.3-.6.6-.9.3-.3.5-.4.9-.6.3-.1.7-.2 1.5-.3.8-.05 1-.05 3.2-.05z"/></svg>'
+];
+
+const CART_SVG = '<svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 11.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8L4 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>';
+
+const ICON_SVG = {
+  caret: '<svg viewBox="0 0 24 24"><polyline points="5 9 12 16 19 9"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19"/></svg>',
+  plus:  '<svg viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"/><line class="bv" x1="12" y1="4" x2="12" y2="20"/></svg>'
+};
+
+/* ================= state ================= */
+/* `elements` mirrors the plugin's config shape exactly, so the generated code is
+   a straight projection of what the preview is showing. */
+const ELEMENTS = [
+  { key:'social',   name:'Social icons',  def:'bottom', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>' },
+  { key:'cart',     name:'Cart',          def:'bottom', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2l2.6 12h11.2L21 7H6"/></svg>' },
+  { key:'account',  name:'Account / login', def:'bottom', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>' },
+  { key:'cta',      name:'Button',        def:'bottom', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>' },
+  { key:'search',   name:'Search',        def:'top',    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6"/><line x1="15.5" y1="15.5" x2="21" y2="21"/></svg>' },
+  { key:'language', name:'Language picker', def:'bottom', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/></svg>' }
+];
+
+const st = {
+  side:'left', align:'left', navPosition:'top',
+  submenu:{ icon:'caret', iconPosition:'edge' },
+  mobile:{ icon:'caret', iconPosition:'edge' },
+  styles:{ hover:'opacity', active:'bold' },
+  elements:{}
+};
+ELEMENTS.forEach(e => { st.elements[e.key] = e.def; });
+
+let dev = 'desktop';
+/* Which preview folders are open, keyed by label, so a re-render keeps state. */
+const pvOpen = { desktop:{}, mobile:{} };
+let pvMenuOpen = true;
+
+/* ================= small helpers ================= */
+function val(id){ return document.getElementById(id).value; }
+function num(id){ return parseFloat(document.getElementById(id).value) || 0; }
+function chk(id){ return document.getElementById(id).checked; }
+function show(id, on){ document.getElementById(id).hidden = !on; }
+function get(path){ return path.split('.').reduce((o,k)=>o[k], st); }
+function set(path, v){
+  const p = path.split('.'); const last = p.pop();
+  p.reduce((o,k)=>o[k], st)[last] = v;
+}
+
+function tog(b){ b.parentElement.classList.toggle('closed'); }
+
+function setSeg(path, btn){
+  set(path, btn.dataset.v);
+  [...btn.parentElement.children].forEach(c => c.classList.toggle('on', c === btn));
+  sync();
+}
+
+function setTab(i){
+  [0,1,2].forEach(n => { document.getElementById('pane'+n).hidden = n !== i; });
+  [...document.querySelectorAll('.tab')].forEach((t,n) => t.classList.toggle('on', n === i));
+}
+
+function setDev(d){
+  dev = d;
+  document.getElementById('devDesktop').classList.toggle('on', d === 'desktop');
+  document.getElementById('devMobile').classList.toggle('on', d === 'mobile');
+  sync();
+}
+
+function onUnit(){
+  document.getElementById('widthHint').textContent = val('widthUnit') === '%'
+    ? 'A percentage of the window width — the sidebar scales with the viewport.'
+    : 'Your page content is inset by this much, so nothing sits under the sidebar.';
+  sync();
+}
+
+/* ================= placement rows ================= */
+function renderPlacement(){
+  const wrap = document.getElementById('placeList');
+  wrap.innerHTML = '';
+  ELEMENTS.forEach(e => {
+    const where = st.elements[e.key];
+    const row = document.createElement('div');
+    row.className = 'pitem' + (where === 'hide' ? ' off' : '');
+    row.innerHTML =
+      '<span class="nm">' + e.icon + '<span>' + e.name + '</span></span>' +
+      '<select data-k="' + e.key + '">' +
+        '<option value="top">Below logo</option>' +
+        '<option value="center">Centered</option>' +
+        '<option value="bottom">Bottom</option>' +
+        '<option value="hide">Hide</option>' +
+      '</select>';
+    const sel = row.querySelector('select');
+    sel.value = where;
+    sel.onchange = () => { st.elements[e.key] = sel.value; renderPlacement(); sync(); };
+    wrap.appendChild(row);
+  });
+}
+
+/* ================= config ================= */
+/* Only non-defaults are emitted, so the pasted snippet stays readable. */
+function buildConfig(){
+  const c = {};
+
+  if (num('breakpoint') !== 767) c.breakpoint = num('breakpoint');
+  if (st.side !== 'left') c.side = st.side;
+  if (num('width') !== 280) c.width = num('width');
+  if (val('widthUnit') !== 'px') c.widthUnit = val('widthUnit');
+  if (st.navPosition !== 'top') c.navPosition = st.navPosition;
+  if (st.align !== 'left') c.align = st.align;
+
+  const defEl = {};
+  ELEMENTS.forEach(e => { defEl[e.key] = e.def; });
+  const els = {};
+  Object.keys(st.elements).forEach(k => {
+    if (st.elements[k] !== defEl[k]) els[k] = st.elements[k];
+  });
+  if (Object.keys(els).length) c.elements = els;
+
+  const sm = {};
+  if (st.submenu.icon !== 'caret') sm.icon = st.submenu.icon;
+  if (st.submenu.iconPosition !== 'edge') sm.iconPosition = st.submenu.iconPosition;
+  if (num('iconSize') !== 13) sm.iconSize = num('iconSize');
+  if (chk('singleOpen')) sm.singleOpen = true;
+  if (!chk('openActive')) sm.openActive = false;
+  if (num('duration') !== 280) sm.duration = num('duration');
+  if (num('indent') !== 16) sm.indent = num('indent');
+  if (num('subScale') !== 0.92) sm.subScale = num('subScale');
+  if (Object.keys(sm).length) c.submenu = sm;
+
+  const m = {};
+  if (!chk('mEnabled')) m.enabled = false;
+  else {
+    if (st.mobile.icon !== 'caret') m.icon = st.mobile.icon;
+    if (st.mobile.iconPosition !== 'edge') m.iconPosition = st.mobile.iconPosition;
+    if (num('mIconSize') !== 15) m.iconSize = num('mIconSize');
+    if (chk('mSingleOpen')) m.singleOpen = true;
+    if (chk('mOpenActive')) m.openActive = true;
+    if (num('mIndent') !== 18) m.indent = num('mIndent');
+    if (num('mSubScale') !== 0.82) m.subScale = num('mSubScale');
+    if (num('mDuration') !== 280) m.duration = num('mDuration');
+  }
+  if (Object.keys(m).length) c.mobile = m;
+
+  const s = {};
+  if (!chk('inhBg')) s.background = val('background');
+  if (!chk('inhFg')) s.textColor = val('textColor');
+  if (num('paddingX') !== 32) s.paddingX = num('paddingX');
+  if (num('paddingY') !== 32) s.paddingY = num('paddingY');
+  if (num('zoneGap') !== 26) s.zoneGap = num('zoneGap');
+  if (num('itemGap') !== 14) s.itemGap = num('itemGap');
+  if (num('fontSize')) s.fontSize = num('fontSize');
+  if (num('logoWidth')) s.logoWidth = num('logoWidth');
+  if (num('socialGap') !== 16) s.socialGap = num('socialGap');
+  if (num('actionGap') !== 16) s.actionGap = num('actionGap');
+  if (!chk('border')) s.border = false;
+  else {
+    if (num('borderWidth') !== 1) s.borderWidth = num('borderWidth');
+    if (!chk('inhBorderColor')) s.borderColor = val('borderColor');
+  }
+  if (chk('dividers')) s.dividers = true;
+  if (st.styles.hover !== 'opacity') s.hover = st.styles.hover;
+  if (st.styles.active !== 'bold') s.active = st.styles.active;
+  if (!chk('ctaFullWidth')) s.ctaFullWidth = false;
+  if (Object.keys(s).length) c.styles = s;
+
+  if (!chk('clipOverflow')) c.clipOverflow = false;
+
+  return c;
+}
+
+function renderCode(){
+  const c = buildConfig();
+  const body = Object.keys(c).length
+    ? JSON.stringify(c, null, 2).replace(/^/gm, '  ').trim()
+    : '{};   // every default is already what you picked';
+  document.getElementById('code').textContent =
+`<!-- SDL Sidebar Nav -->
+<link rel="stylesheet" href="https://sidebar-nav.pages.dev/sidebarNav.css">
+<script>
+  window.SDL_SIDEBAR_NAV_CONFIG = ${body}
+<\/script>
+<script src="https://sidebar-nav.pages.dev/sidebarNav.js"><\/script>`;
+}
+
+function copyCode(){
+  const b = document.getElementById('copyBtn'), s = b.querySelector('span');
+  navigator.clipboard.writeText(document.getElementById('code').textContent);
+  b.classList.add('copied'); s.textContent = 'Copied';
+  setTimeout(() => { b.classList.remove('copied'); s.textContent = 'Copy Code'; }, 1400);
+}
+
+/* ================= preview ================= */
+function iconMarkup(name, cls){
+  if (name === 'none' || !ICON_SVG[name]) return '';
+  return '<span class="' + cls + '" data-i="' + name + '">' + ICON_SVG[name] + '</span>';
+}
+
+/* Height animation, mirroring the plugin. */
+function slide(btn, panel, open){
+  btn.setAttribute('aria-expanded', String(open));
+  if (open){
+    panel.hidden = false;
+    const h = panel.scrollHeight;
+    panel.style.height = '0px';
+    void panel.offsetHeight;
+    panel.style.height = h + 'px';
+    setTimeout(() => { panel.style.height = ''; }, 300);
+  } else {
+    panel.style.height = panel.scrollHeight + 'px';
+    void panel.offsetHeight;
+    panel.style.height = '0px';
+    setTimeout(() => { panel.hidden = true; panel.style.height = ''; }, 300);
+  }
+}
+
+function wire(btn, panel, scope, group){
+  btn.onclick = () => {
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    if (!open && group){
+      group.querySelectorAll('[aria-expanded="true"]').forEach(o => {
+        if (o === btn) return;
+        const p = o.nextElementSibling;
+        pvOpen[scope][o.dataset.lbl] = false;
+        if (p) slide(o, p, false);
+      });
+    }
+    pvOpen[scope][btn.dataset.lbl] = !open;
+    slide(btn, panel, !open);
+  };
+}
+
+function sidebarZones(){
+  /* Returns { top:[], center:[], bottom:[] } of html strings, in the same order
+     the plugin appends them: brand, nav, button, then the icon row. */
+  const z = { top:[], center:[], bottom:[] };
+  z.top.push('<div class="pv-brand"><span>Square Design Lab</span></div>');
+
+  const navHtml = NAV.map(item => {
+    if (!item.folder){
+      return '<li><a class="pv-row' + (item.current ? ' cur' : '') + '" href="#" onclick="return false">' +
+             '<span class="pv-lbl">' + item.label + '</span></a></li>';
+    }
+    const open = !!pvOpen.desktop[item.label];
+    return '<li>' +
+      '<button class="pv-row folder" data-lbl="' + item.label + '" aria-expanded="' + open + '">' +
+        '<span class="pv-lbl">' + item.label + '</span>' + iconMarkup(st.submenu.icon, 'pv-ic') +
+      '</button>' +
+      '<div class="pv-panel"' + (open ? '' : ' hidden') + '><ul class="pv-sub">' +
+        item.children.map(c => '<li><a href="#" onclick="return false">' + c + '</a></li>').join('') +
+      '</ul></div></li>';
+  }).join('');
+  z[st.navPosition].push('<nav class="pv-nav"><ul>' + navHtml + '</ul></nav>');
+
+  const parts = {
+    cta:      '<div class="pv-cta"><a href="#" onclick="return false">Enroll Now</a></div>',
+    search:   '<span class="pv-cart">' + ELEMENTS.find(e=>e.key==='search').icon + '</span>',
+    account:  '<span class="pv-login">Login</span>',
+    cart:     '<span class="pv-cart">' + CART_SVG + '<b style="font-weight:400">3</b></span>',
+    social:   '<span class="pv-social">' + SOCIAL.join('') + '</span>',
+    language: '<span class="pv-cart">' + ELEMENTS.find(e=>e.key==='language').icon + '</span>'
+  };
+
+  const rows = { top:[], center:[], bottom:[] };
+  ['cta','search','account','cart','social','language'].forEach(k => {
+    const where = st.elements[k];
+    if (where === 'hide') return;
+    if (k === 'cta'){ z[where].push(parts.cta); return; }
+    rows[where].push(parts[k]);
+  });
+  ['top','center','bottom'].forEach(w => {
+    if (rows[w].length) z[w].push('<div class="pv-acts">' + rows[w].join('') + '</div>');
+  });
+
+  return z;
+}
+
+function renderDesktop(){
+  const z = sidebarZones();
+  const cls = ['pv-side'];
+  if (chk('border')) cls.push('bd');
+  if (chk('dividers')) cls.push('divs');
+  if (chk('ctaFullWidth')) cls.push('ctafull');
+  cls.push('hov-' + st.styles.hover, 'act-' + st.styles.active);
+
+  const html =
+    '<div class="pv-frame" id="pvFrame"><div class="pv-stage' + (st.side === 'right' ? ' right' : '') + '">' +
+      '<aside class="' + cls.join(' ') + '" data-align="' + st.align + '" data-iconpos="' + st.submenu.iconPosition + '">' +
+        '<div class="pv-zone top">' + z.top.join('') + '</div>' +
+        '<div class="pv-zone mid">' + z.center.join('') + '</div>' +
+        '<div class="pv-zone bottom">' + z.bottom.join('') + '</div>' +
+      '</aside>' +
+      '<div class="pv-content">' +
+        '<section class="pv-sec pv-hero"><div><h2>Design that gets out of the way</h2>' +
+          '<p>Scroll this panel — the sidebar stays put, exactly as it does on your live site.</p></div></section>' +
+        '<section class="pv-sec"><h2>Latest work</h2><p>Your page content is inset by the sidebar width, so nothing ever sits underneath it.</p>' +
+          '<div class="pv-grid"><div class="pv-card"></div><div class="pv-card"></div><div class="pv-card"></div></div></section>' +
+        '<section class="pv-sec"><h2>Journal</h2><p>Full-bleed sections keep working — they just start where the sidebar ends.</p>' +
+          '<div class="pv-grid"><div class="pv-card"></div><div class="pv-card"></div><div class="pv-card"></div></div></section>' +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('preview').innerHTML = html;
+  const side = document.querySelector('.pv-side');
+  side.querySelectorAll('.pv-row.folder').forEach(btn => {
+    wire(btn, btn.nextElementSibling, 'desktop', chk('singleOpen') ? side : null);
+  });
+}
+
+function renderMobile(){
+  const items = NAV.map(item => {
+    if (!item.folder){
+      return '<div class="pv-mitem"><a href="#" onclick="return false">' + item.label + '</a></div>';
+    }
+    if (!chk('mEnabled')){
+      return '<div class="pv-mitem"><a href="#" onclick="return false">' + item.label +
+             ' <span style="opacity:.5;font-size:14px">›</span></a></div>';
+    }
+    const open = !!pvOpen.mobile[item.label];
+    return '<div class="pv-mitem" data-iconpos="' + st.mobile.iconPosition + '">' +
+        '<button class="pv-mtoggle" data-lbl="' + item.label + '" aria-expanded="' + open + '">' +
+          '<span>' + item.label + '</span>' + iconMarkup(st.mobile.icon, 'pv-ic') +
+        '</button></div>' +
+      '<div class="pv-panel"' + (open ? '' : ' hidden') + '><div class="pv-msub">' +
+        item.children.map(c => '<div class="pv-mitem"><a href="#" onclick="return false">' + c + '</a></div>').join('') +
+      '</div></div>';
+  }).join('');
+
+  document.getElementById('preview').innerHTML =
+    '<div class="pv-m' + (pvMenuOpen ? ' open' : '') + '" id="pvM">' +
+      '<div class="pv-mbar"><span class="b">Square Design Lab</span><span class="r">' +
+        '<span class="pv-cart">' + CART_SVG + '<b style="font-weight:400">3</b></span>' +
+        '<button class="pv-burger" id="pvBurger"><i></i><i></i><i></i></button>' +
+      '</span></div>' +
+      '<div class="pv-mmenu">' + items +
+        '<div class="pv-mfoot"><span class="pv-social">' + SOCIAL.join('') + '</span>' +
+        '<span class="pv-cta" style="justify-content:flex-start"><a href="#" onclick="return false">Enroll Now</a></span></div>' +
+      '</div>' +
+    '</div>' +
+    '<p class="pv-mhint">The bar, the burger and the menu are Squarespace’s own — only the folder rows change.</p>';
+
+  const root = document.getElementById('pvM');
+  document.getElementById('pvBurger').onclick = () => {
+    pvMenuOpen = !pvMenuOpen;
+    root.classList.toggle('open', pvMenuOpen);
+  };
+  root.querySelectorAll('.pv-mtoggle').forEach(btn => {
+    const panel = btn.parentElement.nextElementSibling;
+    wire(btn, panel, 'mobile', chk('mSingleOpen') ? root : null);
+  });
+}
+
+function applyPreviewVars(){
+  const r = document.documentElement.style;
+  const unit = val('widthUnit');
+  // A % width is relative to the window on the live site; in the preview box we
+  // scale it against the box so the proportion still reads correctly.
+  r.setProperty('--pv-w', unit === '%' ? num('width') + '%' : num('width') + 'px');
+  r.setProperty('--pv-pad-x', num('paddingX') + 'px');
+  r.setProperty('--pv-pad-y', num('paddingY') + 'px');
+  r.setProperty('--pv-zone-gap', num('zoneGap') + 'px');
+  r.setProperty('--pv-gap', num('itemGap') + 'px');
+  r.setProperty('--pv-indent', num('indent') + 'px');
+  r.setProperty('--pv-ics', num('iconSize') + 'px');
+  r.setProperty('--pv-subscale', String(num('subScale') || 0.92));
+  r.setProperty('--pv-sgap', num('socialGap') + 'px');
+  r.setProperty('--pv-agap', num('actionGap') + 'px');
+  r.setProperty('--pv-bw', num('borderWidth') + 'px');
+  r.setProperty('--pv-fs', (num('fontSize') || 13.45) + 'px');
+  r.setProperty('--pv-mindent', num('mIndent') + 'px');
+  r.setProperty('--pv-msubscale', String(num('mSubScale') || 0.82));
+  r.setProperty('--pv-mics', num('mIconSize') + 'px');
+
+  const bg = chk('inhBg') ? '#fffef7' : val('background');
+  const fg = chk('inhFg') ? '#151414' : val('textColor');
+  r.setProperty('--pv-bg', bg);
+  r.setProperty('--pv-page-bg', bg);
+  r.setProperty('--pv-fg', fg);
+  r.setProperty('--pv-bc', chk('inhBorderColor') ? hexA(fg, .14) : val('borderColor'));
+  r.setProperty('--pv-just', st.align === 'center' ? 'center' : st.align === 'right' ? 'flex-end' : 'flex-start');
+  r.setProperty('--pv-align', st.align);
+}
+
+function hexA(hex, a){
+  const h = hex.replace('#','');
+  const n = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+  return 'rgba(' + parseInt(n.slice(0,2),16) + ',' + parseInt(n.slice(2,4),16) + ',' + parseInt(n.slice(4,6),16) + ',' + a + ')';
+}
+
+/* ================= sync ================= */
+function sync(){
+  // conditional rows
+  show('rowBg', !chk('inhBg'));
+  show('rowFg', !chk('inhFg'));
+  show('rowBorder', chk('border'));
+  show('rowBorderInh', chk('border'));
+  document.getElementById('rowBorder').querySelector('.row:last-child').hidden = chk('inhBorderColor');
+  show('rowIconPos', st.submenu.icon !== 'none');
+  show('rowIconSize', st.submenu.icon !== 'none');
+  show('rowMIconPos', st.mobile.icon !== 'none');
+  show('rowMIconSize', st.mobile.icon !== 'none');
+  document.getElementById('mBody').style.display = chk('mEnabled') ? 'grid' : 'none';
+
+  document.getElementById('iconHint').textContent = ({
+    caret: 'Rotates to point up when the folder is open.',
+    plus:  'Becomes a minus when the folder is open.',
+    arrow: 'Turns to point down when the folder is open.',
+    none:  'No affordance is shown — only use this if the design makes the folder obvious.'
+  })[st.submenu.icon];
+
+  document.getElementById('urlBar').innerHTML =
+    dev === 'desktop'
+      ? '<b>' + (num('width') + val('widthUnit')) + '</b> sidebar on the ' + st.side +
+        ' &nbsp;·&nbsp; active above <b>' + num('breakpoint') + 'px</b>'
+      : '<b>Mobile</b> &nbsp;·&nbsp; native header, ' +
+        (chk('mEnabled') ? 'accordion folders' : 'Squarespace’s own folder drill-down');
+
+  document.getElementById('pvNote').textContent = dev === 'desktop'
+    ? 'Live preview on the test site’s own header — one folder with 8 pages, five links, three social icons, a cart, a login link and a button. The sidebar is sticky inside this box; on your site it is fixed to the window. Click a folder to try the accordion.'
+    : 'Live preview of the native mobile header. Tap the burger to open the menu, then a folder to see it expand in place instead of sliding to a sub-page.';
+
+  document.getElementById('pvWrap').classList.toggle('mobile', dev === 'mobile');
+
+  applyPreviewVars();
+  if (dev === 'desktop') renderDesktop(); else renderMobile();
+  renderCode();
+}
+
+renderPlacement();
+sync();
+</script>
+</body>
+</html>
