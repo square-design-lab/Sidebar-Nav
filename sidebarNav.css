@@ -1,0 +1,619 @@
+/* ==========================================================================
+   SDL Sidebar Nav v1.0
+   Turns the Squarespace 7.1 header into a fixed, full-height left sidebar on
+   desktop. Mobile keeps the native header — only folders become accordions.
+
+   The native #header element IS the sidebar: nothing is cloned out of it, so
+   every Squarespace selector (theme colours, button styles, cart icon, social
+   icons, site title) keeps applying exactly as it did in the top bar.
+   ========================================================================== */
+
+:root {
+  --sdlsn-w: 280px;
+  --sdlsn-top: 0px;
+  --sdlsn-pad-x: 32px;
+  --sdlsn-pad-y: 32px;
+  --sdlsn-zone-gap: 26px;
+  --sdlsn-gap: 14px;
+  --sdlsn-indent: 16px;
+  --sdlsn-dur: 280ms;
+  --sdlsn-ease: cubic-bezier(.22, .61, .36, 1);
+  --sdlsn-align: left;
+  --sdlsn-justify: flex-start;
+  --sdlsn-icon-size: 13px;
+  --sdlsn-icon-stroke: 1.8;
+  --sdlsn-sub-scale: .92;
+  --sdlsn-sub-op: .72;
+  --sdlsn-hover-op: .6;
+  --sdlsn-border-w: 1px;
+  --sdlsn-border-c: rgba(0, 0, 0, .1);
+}
+
+/* --------------------------------------------------------------------------
+   1. The shell — #header becomes the sidebar
+   -------------------------------------------------------------------------- */
+
+html.sdlsn-on #header,
+html.sdlsn-on .header {
+  position: fixed !important;
+  top: var(--sdlsn-top) !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  width: var(--sdlsn-w) !important;
+  max-width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  z-index: 1000 !important;
+  display: block !important;
+  transform: none !important;
+  transition: none !important;
+  background: var(--sdlsn-bg, transparent);
+  color: var(--sdlsn-fg, inherit);
+}
+
+html.sdlsn-on.sdlsn-side-right #header,
+html.sdlsn-on.sdlsn-side-right .header {
+  left: auto !important;
+  right: 0 !important;
+}
+
+html.sdlsn-on.sdlsn-border #header {
+  border-right: var(--sdlsn-border-w) solid var(--sdlsn-border-c);
+}
+
+html.sdlsn-on.sdlsn-border.sdlsn-side-right #header {
+  border-right: 0;
+  border-left: var(--sdlsn-border-w) solid var(--sdlsn-border-c);
+}
+
+/* Chrome the top bar needed and the sidebar does not. */
+html.sdlsn-on #header .header-border,
+html.sdlsn-on #header .header-dropshadow,
+html.sdlsn-on #header .header-background,
+html.sdlsn-on #header .header-display-mobile,
+html.sdlsn-on #header .header-menu,
+html.sdlsn-on #header .header-burger,
+html.sdlsn-on #header .header-title-nav-wrapper,
+html.sdlsn-on #header .header-actions,
+html.sdlsn-on #header .header-nav {
+  display: none !important;
+}
+
+html.sdlsn-on #header .header-announcement-bar-wrapper {
+  display: block !important;
+  height: 100%;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: none !important;
+}
+
+html.sdlsn-on #header .header-inner {
+  display: block !important;
+  height: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+html.sdlsn-on #header .header-display-desktop {
+  display: block !important;
+  height: 100%;
+  width: 100%;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* The skip link must stay reachable — it is the first tab stop on the page. */
+html.sdlsn-on #header .header-skip-link {
+  z-index: 2;
+}
+
+/* Page content clears the sidebar. */
+html.sdlsn-on .sdlsn-wrapper {
+  padding-left: var(--sdlsn-w);
+}
+
+html.sdlsn-on.sdlsn-side-right .sdlsn-wrapper {
+  padding-left: 0;
+  padding-right: var(--sdlsn-w);
+}
+
+/* Some 7.1 sections size themselves off 100vw. `clip` (not `hidden`) keeps
+   position:sticky working because it does not create a scroll container. */
+html.sdlsn-on.sdlsn-clip .sdlsn-wrapper {
+  overflow-x: clip;
+}
+
+/* An announcement bar is lifted out of the header so it spans the full width. */
+.sdlsn-annbar {
+  position: relative;
+  z-index: 1001;
+}
+
+/* --------------------------------------------------------------------------
+   2. Zones — top / middle / bottom
+   -------------------------------------------------------------------------- */
+
+.sdlsn {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sdlsn-zone-gap);
+  height: 100%;
+  width: 100%;
+  padding: var(--sdlsn-pad-y) var(--sdlsn-pad-x);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  text-align: var(--sdlsn-align);
+}
+
+.sdlsn__zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sdlsn-zone-gap);
+  flex: none;
+}
+
+.sdlsn__zone--mid {
+  flex: 1 1 auto;
+  min-height: 0;
+  justify-content: center;
+}
+
+.sdlsn__zone--top:empty,
+.sdlsn__zone--bottom:empty {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   3. Brand
+   -------------------------------------------------------------------------- */
+
+.sdlsn__brand {
+  display: flex;
+  justify-content: var(--sdlsn-justify);
+  flex: none;
+}
+
+.sdlsn__brand .header-title,
+.sdlsn__brand .header-title-text,
+.sdlsn__brand .header-title-logo {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 100%;
+  flex: none !important;
+  text-align: var(--sdlsn-align);
+}
+
+.sdlsn__brand .header-title-logo a,
+.sdlsn__brand .header-title-text a {
+  display: inline-block;
+  white-space: normal;
+}
+
+.sdlsn__brand .header-title-logo img {
+  width: var(--sdlsn-logo-w, auto) !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  height: auto !important;
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   4. Navigation
+   -------------------------------------------------------------------------- */
+
+.sdlsn__nav {
+  width: 100%;
+}
+
+.sdlsn__list,
+.sdlsn__sub {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sdlsn__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sdlsn-gap);
+}
+
+.sdlsn__item {
+  margin: 0;
+  padding: 0;
+}
+
+html.sdlsn-dividers .sdlsn__item + .sdlsn__item {
+  border-top: 1px solid var(--sdlsn-border-c);
+  padding-top: var(--sdlsn-gap);
+}
+
+.sdlsn__link {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: .55em;
+  width: 100%;
+  justify-content: var(--sdlsn-justify);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: inherit;
+  text-decoration: none;
+  font-family: var(--sdlsn-nav-ff, var(--site-navigation-font-font-family, inherit));
+  font-size: var(--sdlsn-nav-fs, var(--site-navigation-font-font-size, 1rem));
+  font-weight: var(--sdlsn-nav-fw, var(--site-navigation-font-font-weight, 400));
+  font-style: var(--sdlsn-nav-fst, var(--site-navigation-font-font-style, normal));
+  letter-spacing: var(--sdlsn-nav-ls, var(--site-navigation-font-letter-spacing, normal));
+  text-transform: var(--sdlsn-nav-tt, var(--site-navigation-font-text-transform, none));
+  line-height: var(--sdlsn-nav-lh, 1.35);
+  transition: opacity .2s ease, color .2s ease;
+}
+
+.sdlsn__label {
+  display: block;
+}
+
+/* Icon pinned to the far edge is the readable default for a left-aligned
+   sidebar: the label and the affordance both sit on predictable columns. */
+.sdlsn[data-iconpos="edge"] .sdlsn__link--folder {
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.sdlsn[data-iconpos="left"] .sdlsn__link--folder .sdlsn__icon,
+.sdlsn[data-iconpos="left"] .sdlsn__link--split .sdlsn__disclosure {
+  order: -1;
+}
+
+.sdlsn[data-iconpos="left"] .sdlsn__link--split .sdlsn__disclosure {
+  margin-right: 0;
+  margin-left: -4px;
+}
+
+/* A folder that also has a page of its own: link plus its own disclosure. */
+.sdlsn__link--split {
+  cursor: default;
+}
+
+.sdlsn__folderlink {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.sdlsn__disclosure {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  margin: 0;
+  padding: 4px;
+  margin-right: -4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Hover / focus */
+.sdlsn__link:hover,
+.sdlsn__folderlink:hover,
+.sdlsn__disclosure:hover,
+.sdlsn__sublink:hover {
+  opacity: var(--sdlsn-hover-op);
+}
+
+.sdlsn__link--split:hover {
+  opacity: 1;
+}
+
+.sdlsn__disclosure:focus-visible,
+.sdlsn__folderlink:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+html.sdlsn-hover-underline .sdlsn__link:hover .sdlsn__label,
+html.sdlsn-hover-underline .sdlsn__sublink:hover {
+  text-decoration: underline;
+  text-underline-offset: .22em;
+}
+
+html.sdlsn-hover-underline .sdlsn__link:hover,
+html.sdlsn-hover-underline .sdlsn__sublink:hover {
+  opacity: 1;
+}
+
+html.sdlsn-hover-none .sdlsn__link:hover,
+html.sdlsn-hover-none .sdlsn__sublink:hover {
+  opacity: 1;
+}
+
+.sdlsn__link:focus-visible,
+.sdlsn__sublink:focus-visible,
+.sdlsn-m-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Active page */
+.sdlsn__link[aria-current="page"],
+.sdlsn__sublink[aria-current="page"] {
+  opacity: 1;
+}
+
+html.sdlsn-active-bold .sdlsn__link[aria-current="page"],
+html.sdlsn-active-bold .sdlsn__sublink[aria-current="page"] {
+  font-weight: 700;
+}
+
+html.sdlsn-active-underline .sdlsn__link[aria-current="page"] .sdlsn__label,
+html.sdlsn-active-underline .sdlsn__sublink[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: .22em;
+}
+
+html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
+  content: "";
+  display: inline-block;
+  width: .4em;
+  height: .4em;
+  margin-right: .55em;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+}
+
+/* Submenu icon */
+.sdlsn__icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--sdlsn-icon-size);
+  height: var(--sdlsn-icon-size);
+  transition: transform var(--sdlsn-dur) var(--sdlsn-ease);
+}
+
+.sdlsn__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--sdlsn-icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sdlsn__icon .sdlsn-bar-v {
+  transform-origin: center;
+  transition: transform var(--sdlsn-dur) var(--sdlsn-ease), opacity var(--sdlsn-dur) var(--sdlsn-ease);
+}
+
+[aria-expanded="true"] > .sdlsn__icon[data-icon="caret"] {
+  transform: rotate(180deg);
+}
+
+[aria-expanded="true"] > .sdlsn__icon[data-icon="arrow"] {
+  transform: rotate(90deg);
+}
+
+[aria-expanded="true"] > .sdlsn__icon[data-icon="plus"] .sdlsn-bar-v {
+  transform: scaleY(0);
+  opacity: 0;
+}
+
+/* Submenu panel */
+.sdlsn__panel {
+  overflow: hidden;
+  transition: height var(--sdlsn-dur) var(--sdlsn-ease);
+}
+
+.sdlsn__panel[hidden] {
+  display: none;
+}
+
+.sdlsn__sub {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sdlsn-gap) * .62);
+  padding: calc(var(--sdlsn-gap) * .78) 0 2px var(--sdlsn-indent);
+}
+
+.sdlsn[data-align="center"] .sdlsn__sub,
+.sdlsn[data-align="right"] .sdlsn__sub {
+  padding-left: 0;
+}
+
+.sdlsn__sublink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  opacity: var(--sdlsn-sub-op);
+  font-family: var(--sdlsn-nav-ff, inherit);
+  font-size: calc(var(--sdlsn-nav-fs, 1rem) * var(--sdlsn-sub-scale));
+  font-weight: var(--sdlsn-nav-fw, 400);
+  letter-spacing: var(--sdlsn-nav-ls, normal);
+  text-transform: var(--sdlsn-nav-tt, none);
+  line-height: 1.35;
+  transition: opacity .2s ease;
+}
+
+/* --------------------------------------------------------------------------
+   5. Actions — social, cart, account, CTA, search, language
+   -------------------------------------------------------------------------- */
+
+.sdlsn__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  justify-content: var(--sdlsn-justify);
+  flex: none;
+}
+
+.sdlsn__actions--stack {
+  flex-direction: column;
+  align-items: var(--sdlsn-items, flex-start);
+  gap: 14px;
+}
+
+.sdlsn__slot {
+  display: flex;
+  align-items: center;
+  justify-content: var(--sdlsn-justify);
+  max-width: 100%;
+}
+
+.sdlsn__slot--cta {
+  width: 100%;
+}
+
+/* Squarespace spaces header actions with viewport-relative margins that make
+   no sense stacked in a column. */
+.sdlsn .header-actions-action,
+.sdlsn .user-accounts-link,
+.sdlsn .header-actions-action > a,
+.sdlsn .header-menu-actions-action {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.sdlsn .header-actions-action--social {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sdlsn-social-gap, 16px);
+  justify-content: var(--sdlsn-justify);
+}
+
+.sdlsn .header-actions-action--social > a {
+  margin: 0 !important;
+}
+
+.sdlsn .header-actions-action--cart > a,
+.sdlsn .header-actions-action--account > a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sdlsn__slot--cta .header-actions-action--cta {
+  width: 100%;
+  display: flex;
+  justify-content: var(--sdlsn-justify);
+}
+
+html.sdlsn-cta-full .sdlsn__slot--cta .btn,
+html.sdlsn-cta-full .sdlsn__slot--cta .sqs-button-element--primary {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   6. Mobile — native header, accordion folders
+   -------------------------------------------------------------------------- */
+
+html.sdlsn-m-on .header-menu-nav-folder:not([data-folder="root"]) {
+  display: none !important;
+}
+
+html.sdlsn-m-on .header-menu-controls {
+  display: none !important;
+}
+
+.sdlsn-m-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: .6em;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.sdlsn-m-folder[data-iconpos="edge"] .sdlsn-m-toggle {
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.sdlsn-m-folder[data-iconpos="left"] .sdlsn__icon {
+  order: -1;
+}
+
+.sdlsn-m-toggle .header-menu-nav-item-content {
+  display: block;
+}
+
+.sdlsn-m-panel {
+  overflow: hidden;
+  transition: height var(--sdlsn-dur) var(--sdlsn-ease);
+}
+
+.sdlsn-m-panel[hidden] {
+  display: none;
+}
+
+.sdlsn-m-panel-inner {
+  padding-top: var(--sdlsn-m-subgap, 6px);
+  padding-bottom: var(--sdlsn-m-subgap, 6px);
+}
+
+.sdlsn-m-subitem {
+  padding-left: var(--sdlsn-m-indent, 18px) !important;
+}
+
+.sdlsn-m-subitem .header-menu-nav-item-content,
+.sdlsn-m-subitem a {
+  font-size: var(--sdlsn-m-subsize, .82em);
+  opacity: var(--sdlsn-sub-op);
+}
+
+.sdlsn-m-folder .sdlsn__icon {
+  width: var(--sdlsn-m-icon-size, 15px);
+  height: var(--sdlsn-m-icon-size, 15px);
+}
+
+/* --------------------------------------------------------------------------
+   7. Motion preferences
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .sdlsn__panel,
+  .sdlsn-m-panel,
+  .sdlsn__icon,
+  .sdlsn__icon .sdlsn-bar-v {
+    transition: none !important;
+  }
+}
+
+/* Squarespace's own entry animations leave header elements at opacity 0 until
+   its script runs; in the sidebar we own the layout, so force them visible. */
+html.sdlsn-on #header .preFade,
+html.sdlsn-on #header .fadeIn {
+  opacity: 1 !important;
+  transform: none !important;
+}
