@@ -526,6 +526,19 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   align-items: center;
 }
 
+/* Templates vary on whether the quantity is inline or a block next to the bag;
+   in a narrow column a block would drop it onto its own line. */
+.sdlsn .Cart-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sdlsn .icon-cart-quantity {
+  display: inline-flex;
+  align-items: center;
+}
+
 .sdlsn__slot--cta .header-actions-action--cta {
   width: 100%;
   display: flex;

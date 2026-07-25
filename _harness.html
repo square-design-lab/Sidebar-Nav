@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar Nav harness</title>
+<link rel="stylesheet" href="/sidebarNav.css">
+<style>
+  /* ------------------------------------------------------------------
+     A faithful copy of the Squarespace 7.1 header this plugin targets,
+     recorded from test-site-sdl.squarespace.com — same class names, same
+     nesting, same `data-folder` / `data-folder-id` wiring, same 767px
+     desktop/mobile swap. Not part of the plugin.
+     ------------------------------------------------------------------ */
+  :root{
+    --siteBackgroundColor:hsla(55,100%,98%,1);
+    --site-navigation-font-font-family:"Inter";
+    --site-navigation-font-font-size:.9rem;
+    --site-navigation-font-font-weight:400;
+    --site-navigation-font-letter-spacing:-.03em;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--siteBackgroundColor);color:rgb(21,20,20);
+       font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+
+  /* Squarespace ships this for its own icon set — it is exactly the rule that
+     printed the word "caret" over the chevron before the attribute was
+     namespaced. Keep it here so the regression cannot come back unnoticed. */
+  [data-icon]::before{content:attr(data-icon)}
+
+  #header{position:fixed;top:0;left:0;right:0;z-index:10;color:rgb(21,20,20)}
+  .header-inner{display:flex;align-items:center;padding:0 34px;height:62px}
+  .header-background{position:absolute;inset:0;background:var(--siteBackgroundColor);z-index:-1}
+  .header-skip-link{position:absolute;left:-9999px}
+  .header-skip-link:focus{left:8px;top:8px;background:#fff;padding:8px;z-index:5}
+
+  .header-display-desktop{display:flex;align-items:center;width:100%;gap:34px}
+  .header-display-mobile{display:none;align-items:center;width:100%;justify-content:space-between}
+  @media(max-width:767px){
+    .header-display-desktop{display:none}
+    .header-display-mobile{display:flex}
+  }
+
+  .header-title-nav-wrapper{display:flex;align-items:center;gap:34px;flex:1}
+  .header-title-text a{font-family:Gloock,Georgia,serif;font-size:17px;color:inherit;text-decoration:none}
+  .header-nav-list{display:inline-flex;align-items:center;gap:22px}
+  .header-nav-item{position:relative}
+  .header-nav-item a,.header-nav-folder-title{
+    color:inherit;text-decoration:none;border:0;background:none;padding:0;cursor:pointer;
+    font-family:var(--site-navigation-font-font-family);
+    font-size:var(--site-navigation-font-font-size);
+    letter-spacing:var(--site-navigation-font-letter-spacing);
+    display:inline-flex;align-items:center;gap:5px}
+  .header-nav-folder-content{position:absolute;top:100%;left:0;display:none;background:#fff;
+    padding:12px;min-width:180px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
+  .header-nav-item--folder:hover .header-nav-folder-content{display:block}
+  .header-nav-folder-item{padding:5px 0}
+  .header-dropdown-icon svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2}
+
+  .header-actions{display:flex;align-items:center;gap:0}
+  .header-actions-action{margin-left:1.2vw}
+  .header-actions-action--social{display:flex;align-items:center}
+  .header-actions-action--social a{margin-right:12px;color:inherit}
+  .header-actions-action--social svg{width:17px;height:17px;fill:currentColor;display:block}
+  .header-actions-action--cart a{display:inline-flex;align-items:center;gap:5px;color:inherit;text-decoration:none}
+  .header-actions-action--cart svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5}
+  .user-accounts-link a{color:inherit;text-decoration:none;font-size:.9rem}
+  .btn{border:1px solid currentColor;padding:9px 18px;color:inherit;text-decoration:none;
+       font-size:.8rem;display:inline-block}
+  .showOnMobile{display:none}
+  @media(max-width:767px){.showOnMobile{display:block}.showOnDesktop{display:none}}
+
+  .header-burger{display:flex}
+  .header-burger-btn{border:0;background:none;cursor:pointer;padding:0;color:inherit}
+  .burger-box{width:22px;height:14px;position:relative}
+  .burger-inner div{position:absolute;left:0;right:0;height:1px;background:currentColor}
+  .top-bun{top:0}.patty{top:50%}.bottom-bun{bottom:0}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* Overlay menu — the drill-down folders the plugin converts to accordions */
+  .header-menu{position:fixed;inset:0;background:var(--siteBackgroundColor);z-index:9;
+               padding:70px 0 30px;overflow-y:auto;visibility:hidden;opacity:0;transition:opacity .3s}
+  body.menu-open .header-menu{visibility:visible;opacity:1}
+  .header-menu-nav-folder{visibility:hidden;position:absolute;inset:0;padding:70px 0 30px}
+  .header-menu-nav-folder--active{visibility:visible;position:static;padding:0}
+  .header-menu-nav-item{padding:11px 20px}
+  .header-menu-nav-item a{color:inherit;text-decoration:none}
+  .header-menu-nav-item-content{font-family:Gloock,Georgia,serif;font-size:22px;line-height:1.25}
+  .header-menu-actions{display:flex;gap:16px;padding:26px 20px 0}
+  .header-menu-actions svg{width:20px;height:20px;fill:currentColor}
+  .header-menu-cta{padding:20px}
+
+  main{padding-top:62px}
+  .page-section{padding:60px 40px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .page-section h2{font-family:Gloock,Georgia,serif;font-weight:400;font-size:30px;margin:0 0 10px}
+  .page-section p{max-width:52ch;color:#4b4a48;margin:0}
+  .tall{min-height:900px}
+  #log{position:fixed;right:10px;bottom:10px;z-index:3000;max-width:340px;max-height:44vh;overflow:auto;
+       font:11px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;background:#12141a;color:#e6e9ef;
+       padding:10px;border-radius:8px}
+</style>
+</head>
+<body id="collection-home">
+<div id="siteWrapper" class="clearfix site-wrapper">
+
+<header id="header" class="white header theme-col--primary" data-test="header" data-section-theme="white"
+        data-controller="Header" data-section-id="header" data-header-style="theme">
+  <div class="sqs-announcement-bar-dropzone"></div>
+  <div class="header-announcement-bar-wrapper">
+    <a href="#page" class="header-skip-link sqs-button-element--primary">Skip to Content</a>
+    <div class="header-border"></div>
+    <div class="header-dropshadow"></div>
+    <div class="header-inner container--fluid header-layout--with-commerce">
+      <div class="header-background theme-bg--primary"></div>
+
+      <div class="header-display-desktop">
+        <div class="header-burger menu-overlay-has-visible-non-navigation-items preFade">
+          <button class="header-burger-btn burger" data-test="header-burger">
+            <span class="js-header-burger-open-title visually-hidden">Open Menu</span>
+            <span class="js-header-burger-close-title visually-hidden">Close Menu</span>
+            <div class="burger-box"><div class="burger-inner header-menu-icon-doubleLineHamburger">
+              <div class="top-bun"></div><div class="patty"></div><div class="bottom-bun"></div></div></div>
+          </button>
+        </div>
+
+        <div class="header-title-nav-wrapper">
+          <div class="header-title preFade fadeIn">
+            <div class="header-title-text"><a id="site-title" href="/">Square Design Lab</a></div>
+          </div>
+          <div class="header-nav">
+            <div class="header-nav-wrapper">
+              <nav class="header-nav-list">
+                <div class="header-nav-item header-nav-item--folder">
+                  <button class="header-nav-folder-title preFade fadeIn" data-href="/plugins"
+                          aria-expanded="false" aria-controls="plugins">
+                    <span class="header-nav-folder-title-text">Plugins</span>
+                    <span class="header-dropdown-icon"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div id="plugins" class="header-nav-folder-content">
+                    <div class="header-nav-folder-item"><a href="/summary-block"><span class="header-nav-folder-item-content">Summary Block</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/list-section-test"><span class="header-nav-folder-item-content">List Section</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/buttons"><span class="header-nav-folder-item-content">Buttons</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/map"><span class="header-nav-folder-item-content">Map</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/slider"><span class="header-nav-folder-item-content">Slider</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/timeline"><span class="header-nav-folder-item-content">Timeline</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/gallery"><span class="header-nav-folder-item-content">Gallery</span></a></div>
+                    <div class="header-nav-folder-item"><a href="/background"><span class="header-nav-folder-item-content">Background</span></a></div>
+                  </div>
+                </div>
+                <div class="header-nav-item header-nav-item--collection"><a href="/store">Store</a></div>
+                <div class="header-nav-item header-nav-item--collection"><a href="/blog">Blog</a></div>
+                <div class="header-nav-item header-nav-item--collection"><a href="/events">Events</a></div>
+                <div class="header-nav-item header-nav-item--collection"><a href="/portfolio">Portfolio</a></div>
+                <div class="header-nav-item header-nav-item--collection"><a href="/plugin">Plugin</a></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions header-actions--right">
+          <div class="user-accounts-link header-nav-item header-nav-item--collection customerAccountLoginDesktop">
+            <a class="user-accounts-text-link header-nav-item" href="#"><span class="unauth">Login</span></a>
+          </div>
+          <div class="header-actions-action header-actions-action--social">
+            <a class="icon icon--fill header-icon" href="#"><svg viewBox="0 0 24 24"><path d="M15.1 8.3h-2V7c0-.6.4-.8.7-.8h1.3V4h-1.8c-2 0-2.5 1.5-2.5 2.5v1.8H9.5v2.3h1.3V20h2.3v-9.4h1.7l.3-2.3z"/></svg></a>
+            <a class="icon icon--fill header-icon" href="#"><svg viewBox="0 0 24 24"><path d="M20 6.5c-.6.3-1.3.5-2 .6.6-.4 1.1-1 1.3-1.8-.6.4-1.3.7-2.1.8a3.3 3.3 0 0 0-5.7 3C8.7 8.9 6.3 7.6 4.7 5.6a3.3 3.3 0 0 0 1 4.4c-.5 0-1-.2-1.5-.4a3.3 3.3 0 0 0 2.7 3.3c-.5.1-1 .2-1.5.1a3.3 3.3 0 0 0 3.1 2.3A6.6 6.6 0 0 1 4 16.7a9.3 9.3 0 0 0 14.4-8.3c.7-.5 1.2-1.2 1.6-1.9z"/></svg></a>
+            <a class="icon icon--fill header-icon" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6" r="1.4"/></svg></a>
+          </div>
+          <div class="showOnMobile">
+            <div class="header-actions-action header-actions-action--cart">
+              <a class="icon icon--cart sqs-custom-cart header-icon" href="/cart"><span class="Cart-inner">
+                <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 11.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8L4 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+                <div class="icon-cart-quantity"><span class="sqs-cart-quantity">3</span></div></span></a>
+            </div>
+          </div>
+          <div class="showOnDesktop">
+            <div class="header-actions-action header-actions-action--cart">
+              <a class="icon icon--cart sqs-custom-cart header-icon" href="/cart"><span class="Cart-inner">
+                <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 11.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8L4 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+                <div class="icon-cart-quantity"><span class="sqs-cart-quantity">3</span></div></span></a>
+            </div>
+          </div>
+          <div class="header-actions-action header-actions-action--cta">
+            <a class="btn btn--border sqs-button-element--primary" href="/#enroll">Enroll Now</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-display-mobile">
+        <div class="header-title-nav-wrapper">
+          <div class="header-title preFade fadeIn">
+            <div class="header-title-text"><a id="site-title-m" href="/">Square Design Lab</a></div>
+          </div>
+        </div>
+        <div class="header-actions header-actions--right">
+          <div class="header-actions-action header-actions-action--cart">
+            <a class="icon icon--cart sqs-custom-cart header-icon" href="/cart"><span class="Cart-inner">
+              <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 11.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8L4 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+              <div class="icon-cart-quantity"><span class="sqs-cart-quantity">3</span></div></span></a>
+          </div>
+        </div>
+        <div class="header-burger menu-overlay-has-visible-non-navigation-items">
+          <button class="header-burger-btn burger" id="burger">
+            <span class="js-header-burger-open-title visually-hidden">Open Menu</span>
+            <div class="burger-box"><div class="burger-inner header-menu-icon-doubleLineHamburger">
+              <div class="top-bun"></div><div class="patty"></div><div class="bottom-bun"></div></div></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-menu header-menu--folder-list">
+    <div class="header-menu-bg theme-bg--primary"></div>
+    <div class="header-menu-nav">
+      <nav class="header-menu-nav-list">
+        <div class="header-menu-nav-folder header-menu-nav-folder--active" data-folder="root">
+          <div class="header-menu-nav-folder-content">
+            <div class="header-menu-nav-wrapper">
+              <div class="container header-menu-nav-item">
+                <a data-folder-id="/plugins" href="/plugins">
+                  <div class="header-menu-nav-item-content header-menu-nav-item-content-folder">
+                    <span class="visually-hidden">Folder:</span>
+                    <span class="header-nav-folder-title-text">Plugins</span>
+                    <span class="header-dropdown-icon"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </div>
+                </a>
+              </div>
+              <div class="container header-menu-nav-item header-menu-nav-item--collection"><a href="/store"><div class="header-menu-nav-item-content">Store</div></a></div>
+              <div class="container header-menu-nav-item header-menu-nav-item--collection"><a href="/blog"><div class="header-menu-nav-item-content">Blog</div></a></div>
+              <div class="container header-menu-nav-item header-menu-nav-item--collection"><a href="/events"><div class="header-menu-nav-item-content">Events</div></a></div>
+              <div class="container header-menu-nav-item header-menu-nav-item--collection"><a href="/portfolio"><div class="header-menu-nav-item-content">Portfolio</div></a></div>
+              <div class="container header-menu-nav-item header-menu-nav-item--collection"><a href="/plugin"><div class="header-menu-nav-item-content">Plugin</div></a></div>
+              <div class="user-accounts-link header-menu-nav-item customerAccountLoginMobile">
+                <a class="user-accounts-text-link" href="#"><span class="unauth">Login</span></a>
+              </div>
+            </div>
+            <div class="header-menu-actions social-accounts">
+              <div class="header-menu-actions-action header-menu-actions-action--social mobile"><a class="icon icon--lg icon--fill header-icon" href="#"><svg viewBox="0 0 24 24"><path d="M15.1 8.3h-2V7c0-.6.4-.8.7-.8h1.3V4h-1.8c-2 0-2.5 1.5-2.5 2.5v1.8H9.5v2.3h1.3V20h2.3v-9.4h1.7l.3-2.3z"/></svg></a></div>
+              <div class="header-menu-actions-action header-menu-actions-action--social mobile"><a class="icon icon--lg icon--fill header-icon" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></a></div>
+            </div>
+            <div class="header-menu-cta"><a class="btn sqs-button-element--primary" href="/#enroll">Enroll Now</a></div>
+          </div>
+        </div>
+
+        <div class="header-menu-nav-folder" data-folder="/plugins">
+          <div class="header-menu-nav-folder-content">
+            <div class="header-menu-controls container header-menu-nav-item">
+              <a class="header-menu-controls-control header-menu-controls-control--active" data-action="back" href="/" tabindex="-1">
+                <span class="header-dropdown-icon"><svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg></span><span>Back</span>
+              </a>
+            </div>
+            <div class="container header-menu-nav-item"><a href="/summary-block"><div class="header-menu-nav-item-content">Summary Block</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/list-section-test"><div class="header-menu-nav-item-content">List Section</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/buttons"><div class="header-menu-nav-item-content">Buttons</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/map"><div class="header-menu-nav-item-content">Map</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/slider"><div class="header-menu-nav-item-content">Slider</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/timeline"><div class="header-menu-nav-item-content">Timeline</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/gallery"><div class="header-menu-nav-item-content">Gallery</div></a></div>
+            <div class="container header-menu-nav-item"><a href="/background"><div class="header-menu-nav-item-content">Background</div></a></div>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="page" class="container" role="main">
+  <article class="sections">
+    <section class="page-section full-bleed-section"><h2>Design that gets out of the way</h2>
+      <p>Scroll — the sidebar stays put and the content moves underneath it.</p></section>
+    <section class="page-section full-bleed-section tall"><h2>Latest work</h2>
+      <p>Page content is inset by the sidebar width, so nothing sits underneath it.</p></section>
+    <section class="page-section full-bleed-section tall"><h2>Journal</h2>
+      <p>Full-bleed sections keep working — they just start where the sidebar ends.</p></section>
+  </article>
+</main>
+
+<footer id="footer-sections" class="sections">
+  <section class="page-section"><p>Footer</p></section>
+</footer>
+</div>
+
+<pre id="log">running…</pre>
+
+<script>
+  /* Stand-in for the Squarespace burger controller. */
+  document.getElementById('burger').addEventListener('click', function () {
+    document.body.classList.toggle('menu-open');
+  });
+
+  /* Config comes from ?cfg=<base64 json> so the harness can be driven from the
+     address bar without editing the file. */
+  (function () {
+    var p = new URLSearchParams(location.search).get('cfg');
+    window.SDL_SIDEBAR_NAV_CONFIG = p ? JSON.parse(atob(p)) : {};
+  }());
+</script>
+<script src="/sidebarNav.js"></script>
+<script>
+  window.__report = function () {
+    var out = [];
+    var sb = document.querySelector('.sdlsn');
+    out.push('sidebar mounted: ' + !!sb);
+    out.push('viewport: ' + innerWidth + '×' + innerHeight);
+    out.push('html classes: ' + document.documentElement.className);
+    if (sb) {
+      out.push('links: ' + [].map.call(sb.querySelectorAll('.sdlsn__link,.sdlsn__sublink'),
+        function (n) { return n.textContent.trim(); }).join(', '));
+    }
+    var mf = document.querySelectorAll('.sdlsn-m-folder').length;
+    out.push('mobile accordion folders: ' + mf);
+    document.getElementById('log').textContent = out.join('\n');
+    return out.join('\n');
+  };
+  setTimeout(window.__report, 300);
+</script>
+</body>
+</html>
