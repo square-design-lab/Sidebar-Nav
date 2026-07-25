@@ -86,6 +86,10 @@
       logoWidth: 0,            // px; 0 leaves the logo at its natural size
       socialGap: 16,
       actionGap: 16,           // between login / cart / social in the icon row
+      // Social icons get their own row: a login link, a cart and three icons
+      // are a sub-pixel away from wrapping in a 280px column, and a row that
+      // sometimes wraps reads as a mistake. Set true to keep them inline.
+      socialInline: false,
       border: true,
       borderColor: '',         // '' derives from the text colour
       borderWidth: 1,
@@ -650,15 +654,17 @@
         return;
       }
 
-      if (!rows[where]) {
-        rows[where] = el('div', 'sdlsn__actions');
-        z.appendChild(rows[where]);
+      var ownRow = kind === 'social' && !cfg.styles.socialInline;
+      var rowKey = ownRow ? where + ':social' : where;
+      if (!rows[rowKey]) {
+        rows[rowKey] = el('div', 'sdlsn__actions' + (ownRow ? ' sdlsn__actions--social' : ''));
+        z.appendChild(rows[rowKey]);
       }
       nodes.forEach(function (n) {
         var slot = el('div', 'sdlsn__slot sdlsn__slot--' + kind);
         park(n);
         slot.appendChild(n);
-        rows[where].appendChild(slot);
+        rows[rowKey].appendChild(slot);
       });
     });
 

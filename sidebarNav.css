@@ -477,10 +477,10 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
   flex: none;
 }
 
-.sdlsn__actions--stack {
-  flex-direction: column;
-  align-items: var(--sdlsn-items, flex-start);
-  gap: 14px;
+/* Two icon rows in the same band sit at icon-row spacing, not band spacing —
+   the band gap would read as two separate blocks. */
+.sdlsn__actions + .sdlsn__actions {
+  margin-top: calc(var(--sdlsn-action-gap, 16px) - var(--sdlsn-zone-gap));
 }
 
 .sdlsn__slot {

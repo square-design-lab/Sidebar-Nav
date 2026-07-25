@@ -153,6 +153,7 @@
   .pv-sub a{display:block;color:inherit;text-decoration:none;opacity:.72;
             font-size:calc(var(--pv-fs,13.45px) * var(--pv-subscale,.92));letter-spacing:-.03em;line-height:1.35}
 
+  .pv-acts + .pv-acts{margin-top:calc(var(--pv-agap,16px) - var(--pv-zone-gap,26px))}
   .pv-acts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--pv-agap,16px);justify-content:var(--pv-just,flex-start);flex:none}
   .pv-social{display:flex;align-items:center;gap:var(--pv-sgap,16px)}
   .pv-social svg{width:17px;height:17px;fill:currentColor;display:block}
@@ -422,6 +423,10 @@
               <div class="hint">Between login, cart and social</div></div>
           </div>
 
+          <div class="tog"><label>Social icons share the icon row</label>
+            <span class="sw"><input type="checkbox" id="socialInline" onchange="sync()"><span></span></span></div>
+          <div class="hint">Off gives them their own row, which never wraps unevenly in a narrow sidebar.</div>
+
           <div class="tog"><label>Edge border</label>
             <span class="sw"><input type="checkbox" id="border" checked onchange="sync()"><span></span></span></div>
           <div class="two" id="rowBorder">
@@ -688,6 +693,7 @@ function buildConfig(){
   if (num('logoWidth')) s.logoWidth = num('logoWidth');
   if (num('socialGap') !== 16) s.socialGap = num('socialGap');
   if (num('actionGap') !== 16) s.actionGap = num('actionGap');
+  if (chk('socialInline')) s.socialInline = true;
   if (!chk('border')) s.border = false;
   else {
     if (num('borderWidth') !== 1) s.borderWidth = num('borderWidth');
@@ -797,14 +803,18 @@ function sidebarZones(){
   };
 
   const rows = { top:[], center:[], bottom:[] };
+  const socialRows = { top:[], center:[], bottom:[] };
+  const inline = chk('socialInline');
   ['cta','search','account','cart','social','language'].forEach(k => {
     const where = st.elements[k];
     if (where === 'hide') return;
     if (k === 'cta'){ z[where].push(parts.cta); return; }
+    if (k === 'social' && !inline){ socialRows[where].push(parts[k]); return; }
     rows[where].push(parts[k]);
   });
   ['top','center','bottom'].forEach(w => {
     if (rows[w].length) z[w].push('<div class="pv-acts">' + rows[w].join('') + '</div>');
+    if (socialRows[w].length) z[w].push('<div class="pv-acts">' + socialRows[w].join('') + '</div>');
   });
 
   return z;
