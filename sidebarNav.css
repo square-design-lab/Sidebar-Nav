@@ -134,6 +134,16 @@ html.sdlsn-on.sdlsn-clip .sdlsn-wrapper {
   z-index: 1001;
 }
 
+/* Squarespace's header controller writes an inline `padding-top` on the first
+   section equal to the header's measured height, so a fixed top bar cannot
+   cover it. A full-height sidebar makes that the entire viewport — 895px of
+   blank space on the test site. A stylesheet !important outranks a plain
+   inline style, so this needs no observer and survives Squarespace
+   re-measuring on resize. */
+html.sdlsn-on .sdlsn-first-section {
+  padding-top: 0 !important;
+}
+
 /* --------------------------------------------------------------------------
    2. Zones — top / middle / bottom
    -------------------------------------------------------------------------- */
@@ -499,13 +509,18 @@ html.sdlsn-active-dot .sdlsn__link[aria-current="page"] .sdlsn__label::before {
 }
 
 /* Squarespace spaces header actions with viewport-relative margins that make
-   no sense stacked in a column. */
+   no sense stacked in a column. Padding is reset on the *wrappers* only — the
+   anchor is the button, and zeroing its padding flattens the CTA to a hairline. */
 .sdlsn .header-actions-action,
 .sdlsn .user-accounts-link,
-.sdlsn .header-actions-action > a,
 .sdlsn .header-menu-actions-action {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+.sdlsn .header-actions-action > a,
+.sdlsn .user-accounts-link > a {
+  margin: 0 !important;
 }
 
 .sdlsn .header-actions-action--social {

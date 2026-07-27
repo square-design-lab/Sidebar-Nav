@@ -162,8 +162,8 @@
   .pv-cart svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5}
   .pv-login{font-size:13.45px;letter-spacing:-.03em}
   .pv-cta{display:flex;justify-content:var(--pv-just,flex-start);width:100%}
-  .pv-cta a{border:1px solid currentColor;color:inherit;text-decoration:none;padding:9px 18px;
-            font-size:12.6px;letter-spacing:-.02em;white-space:nowrap}
+  .pv-cta a{display:inline-block;border:1px solid currentColor;color:inherit;text-decoration:none;
+            padding:10px 22px;font-size:13.45px;letter-spacing:-.02em;white-space:nowrap;text-align:center}
   .pv-side.ctafull .pv-cta a{width:100%;text-align:center}
 
   .pv-content{flex:1 1 auto;min-width:0}
@@ -460,7 +460,8 @@
           </div>
 
           <div class="tog"><label>Button fills the width</label>
-            <span class="sw"><input type="checkbox" id="ctaFullWidth" checked onchange="sync()"><span></span></span></div>
+            <span class="sw"><input type="checkbox" id="ctaFullWidth" onchange="sync()"><span></span></span></div>
+          <div class="hint">Off keeps the button exactly as it looks in your header. On stretches it to the column width.</div>
         </div>
       </section>
 
@@ -703,7 +704,7 @@ function buildConfig(){
   if (chk('dividers')) s.dividers = true;
   if (st.styles.hover !== 'opacity') s.hover = st.styles.hover;
   if (st.styles.active !== 'bold') s.active = st.styles.active;
-  if (!chk('ctaFullWidth')) s.ctaFullWidth = false;
+  if (chk('ctaFullWidth')) s.ctaFullWidth = true;
   if (Object.keys(s).length) c.styles = s;
 
   if (!chk('clipOverflow')) c.clipOverflow = false;
@@ -805,17 +806,20 @@ function sidebarZones(){
 
   const rows = { top:[], center:[], bottom:[] };
   const socialRows = { top:[], center:[], bottom:[] };
+  const ctas = { top:[], center:[], bottom:[] };
   const inline = chk('socialInline');
-  ['cta','search','account','cart','social','language'].forEach(k => {
+  // Same order the plugin uses: icon row, social row, then the button last.
+  ['search','account','cart','social','language','cta'].forEach(k => {
     const where = st.elements[k];
     if (where === 'hide') return;
-    if (k === 'cta'){ z[where].push(parts.cta); return; }
+    if (k === 'cta'){ ctas[where].push(parts.cta); return; }
     if (k === 'social' && !inline){ socialRows[where].push(parts[k]); return; }
     rows[where].push(parts[k]);
   });
   ['top','center','bottom'].forEach(w => {
     if (rows[w].length) z[w].push('<div class="pv-acts">' + rows[w].join('') + '</div>');
     if (socialRows[w].length) z[w].push('<div class="pv-acts">' + socialRows[w].join('') + '</div>');
+    if (ctas[w].length) z[w].push(ctas[w].join(''));
   });
 
   return z;

@@ -96,8 +96,15 @@
       dividers: false,         // hairline between top-level items
       hover: 'opacity',        // 'opacity' | 'underline' | 'none'
       active: 'bold',          // 'bold' | 'underline' | 'dot' | 'none'
-      ctaFullWidth: true
+      // Off keeps the button identical to the one in your header. On stretches
+      // it to the column width, which changes its proportions.
+      ctaFullWidth: false
     },
+
+    // Squarespace pads the first section by the header height so a fixed top
+    // bar cannot cover it. With a full-height sidebar that padding is the whole
+    // viewport, so it is cleared.
+    clearFirstSectionPadding: true,
 
     // Some 7.1 sections size themselves off 100vw; clipping stops the
     // horizontal scrollbar that would cause. `clip` keeps sticky working.
@@ -575,8 +582,10 @@
     return nav;
   }
 
-  /* Render order inside a band: brand, nav, CTA, then the icon row. */
-  var ACTION_ORDER = ['cta', 'search', 'account', 'cart', 'social', 'language', 'other'];
+  /* Render order inside a band: brand, nav, the icon row, then the button.
+     The button is the heaviest element in the column, so it reads as the end
+     of the block — putting it above the icons leaves them looking orphaned. */
+  var ACTION_ORDER = ['search', 'account', 'cart', 'social', 'language', 'other', 'cta'];
 
   function mount() {
     var h = header();
@@ -600,6 +609,12 @@
 
     var wrapper = q('#siteWrapper') || q('.site-wrapper') || (q('#page') && q('#page').parentNode);
     if (wrapper) wrapper.classList.add('sdlsn-wrapper');
+
+    if (cfg.clearFirstSectionPadding) {
+      var page = q('#page') || q('main');
+      var first = page && (q('.page-section', page) || q('.sections > *', page));
+      if (first) first.classList.add('sdlsn-first-section');
+    }
 
     shell = el('div', 'sdlsn', {
       'data-align': cfg.align,
@@ -688,6 +703,8 @@
     shell = null;
     var wrapper = q('.sdlsn-wrapper');
     if (wrapper) wrapper.classList.remove('sdlsn-wrapper');
+    var first = q('.sdlsn-first-section');
+    if (first) first.classList.remove('sdlsn-first-section');
     document.documentElement.style.setProperty('--sdlsn-top', '0px');
   }
 

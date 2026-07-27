@@ -23,6 +23,7 @@ Everything is optional. Set only what you want to differ from the defaults below
 | `navPosition` | `'top'` | Which vertical band the nav sits in: `'top'` (under the logo), `'center'`, `'bottom'`. |
 | `clipOverflow` | `true` | Clips sideways overflow on the page wrapper. Stops the horizontal scrollbar that a full-bleed section sized in `vw` can cause. Uses `overflow-x: clip`, which — unlike `hidden` — leaves `position: sticky` working. |
 | `skipInEditor` | `true` | Stand down while the Squarespace editor is in edit mode, so the header stays editable. |
+| `clearFirstSectionPadding` | `true` | Clears the top padding Squarespace puts on the first section. Its header controller sets that padding to the header's measured height so a fixed top bar cannot cover the section — with a full-height sidebar that becomes the entire viewport. |
 
 ### `breakpoint` and your site
 
@@ -46,7 +47,7 @@ Which vertical band each native header element goes in. Values: `'top'`, `'cente
 
 Elements your header does not have are simply skipped.
 
-**Order within a band** is fixed: logo, nav, button, then the icon row (search, account, cart, language), then social. The logo always leads the top band.
+**Order within a band** is fixed: logo, nav, the icon row (search, account, cart, language), the social row, then the button. The logo always leads the top band and the button always closes its band.
 
 ```js
 elements: { social: 'bottom', cart: 'top', account: 'hide', cta: 'center' }
@@ -110,7 +111,7 @@ The mobile header itself is left exactly as Squarespace built it. Only folders c
 | `dividers` | `false` | Hairline between top-level nav links. |
 | `hover` | `'opacity'` | `'opacity'`, `'underline'`, `'none'`. |
 | `active` | `'bold'` | Current page: `'bold'`, `'underline'`, `'dot'`, `'none'`. |
-| `ctaFullWidth` | `true` | The header button fills the column width. |
+| `ctaFullWidth` | `false` | `false` keeps the button identical to the one in your header. `true` stretches it to the column width. |
 
 ---
 
