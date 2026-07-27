@@ -736,7 +736,15 @@
     var wrapper = q('.sdlsn-wrapper');
     if (wrapper) wrapper.classList.remove('sdlsn-wrapper');
     var first = q('.sdlsn-first-section');
-    if (first) first.classList.remove('sdlsn-first-section');
+    if (first) {
+      first.classList.remove('sdlsn-first-section');
+      // Squarespace measured the header while it was a full-height column and
+      // left that on the section as an inline style. It only re-measures on its
+      // own resize, so put the real header height back now rather than leave a
+      // viewport-tall gap behind.
+      var h = header();
+      if (first.style.paddingTop && h) first.style.paddingTop = h.offsetHeight + 'px';
+    }
     document.documentElement.style.setProperty('--sdlsn-top', '0px');
   }
 

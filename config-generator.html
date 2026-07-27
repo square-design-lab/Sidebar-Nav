@@ -535,6 +535,7 @@
 /* ================= sample header (mirrors the live test site) ================= */
 const NAV = [
   { label:'Plugins', folder:true, children:['Summary Block','List Section','Buttons','Map','Slider','Timeline','Gallery','Background'] },
+  { label:'Studio',  folder:true, children:['About','Team','Contact'] },
   { label:'Store' }, { label:'Blog', current:true }, { label:'Events' },
   { label:'Portfolio' }, { label:'Plugin' }
 ];
@@ -967,7 +968,7 @@ function sync(){
         (chk('mEnabled') ? 'accordion folders' : 'Squarespace’s own folder drill-down');
 
   document.getElementById('pvNote').textContent = dev === 'desktop'
-    ? 'Live preview on the test site’s own header — one folder with 8 pages, five links, three social icons, a cart, a login link and a button. The sidebar is sticky inside this box; on your site it is fixed to the window. Click a folder to try the accordion.'
+    ? 'Live preview on the test site’s own header — two folders, five links, three social icons, a cart, a login link and a button. The sidebar is sticky inside this box; on your site it is fixed to the window. Click both folders to try the accordion and the one-at-a-time setting.'
     : 'Live preview of the native mobile header. Tap the burger to open the menu, then a folder to see it expand in place instead of sliding to a sub-page.';
 
   document.getElementById('pvWrap').classList.toggle('mobile', dev === 'mobile');
