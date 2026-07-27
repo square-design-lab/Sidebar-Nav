@@ -128,6 +128,12 @@ A sidebar has nothing behind it. Inheriting the live colour is wrong by construc
 
 Colours are resolved through a throwaway probe element, because these variables hold `hsla()` and the border tint needs `rgb` channels.
 
+That fixes text. The **button** breaks one level up: Squarespace copies the overlaid section's `data-section-theme` (plus a matching class) onto `#header`, and the theme CSS repaints the button for that backdrop. The identical CTA rendered white-on-black on the home page — whose hero is `data-section-theme="dark"` — and brand red (`rgb(235,40,50)`) on every other page, where the header carries no theme at all.
+
+The rule (`styles.headerTheme: 'auto'`): if the header's theme equals the **first section's** theme, it was inherited from the overlay, so drop the attribute and the class and let the header fall back to its default presentation — which is exactly what non-overlay pages already show. A theme that *differs* was configured on the header itself, so leave it. `'keep'` opts out; a theme name pins one.
+
+A `MutationObserver` on the header's `class` and `data-section-theme` holds the decision, because a dynamic header re-themes itself while scrolling. Re-stripping produces no further mutation to react to, so it cannot loop. `unmount()` puts the attribute and class back.
+
 ### Detecting the editor
 
 Two independent signals, because neither alone is enough: Squarespace's edit-mode classes are definitive but only appear once editing starts, while `location.ancestorOrigins` (with `document.referrer` as the fallback) catches the editor's `/config` iframe from the first paint. A `MutationObserver` on both `<html>` and `<body>` classes tracks it in both directions, so entering *and* leaving edit mode without a reload takes effect immediately.
@@ -188,7 +194,9 @@ https://cdn.jsdelivr.net/gh/square-design-lab/Sidebar-Nav@<sha>/sidebarNav.js
 
 Sidebar mount at exact width with no horizontal overflow; nav rebuilt from the real header with correct hrefs; accordion open/close with height animation and `aria-expanded`; native nav, actions, burger and overlay hidden with no duplicate cart and the live cart quantity intact; caret and plus/minus icons; left and right side; centre alignment; dividers; `active: 'underline'`; per-element band placement; Escape closing a folder and restoring focus; desktop → mobile → desktop round trip restoring the header exactly.
 
-Second pass, against the real Code Injection install rather than an injected build: first section flush at `padding-top: 0`; the CTA matching the native header button exactly (`10.2px 22.1px`, 115×38, same colour and fill) and sitting last, after the icon and social rows; logo and nav both at the resolved dark colour on a solid cream column, unchanged after scrolling 1000px past the dark hero; `aria-current` and folder auto-open on `/summary-block`; sidebar still pinned at `top: 0` full height under scroll; and entering edit mode (`body.sqs-edit-mode-active`) tearing the sidebar down — native nav back, title back in `.header-title-nav-wrapper`, wrapper padding cleared — then rebuilding on exit.
+Second and third passes, against the real Code Injection install rather than an injected build: first section flush at `padding-top: 0`; the CTA matching the native header button exactly (`10.2px 22.1px`, 115×38, same colour and fill) and sitting last, after the icon and social rows; logo and nav both at the resolved dark colour on a solid cream column, unchanged after scrolling 1000px past the dark hero; `aria-current` and folder auto-open on `/summary-block`; sidebar still pinned at `top: 0` full height under scroll; and entering edit mode (`body.sqs-edit-mode-active`) tearing the sidebar down — native nav back, title back in `.header-title-nav-wrapper`, wrapper padding cleared — then rebuilding on exit.
+
+Section-theme pass: on the home page the header's inherited `dark` theme is dropped (`data-section-theme` gone, class gone) and the CTA renders brand red, matching `/store` and `/summary-block` where the header never had a theme; `destroy()` hands `dark` back and the native top bar returns to its white overlay button; `refresh()` re-applies. Logo, cart icon and sidebar fill are unchanged by the swap.
 
 ### Verified on the harness
 
