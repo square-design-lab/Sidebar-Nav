@@ -38,7 +38,7 @@ Open `config-generator.html` to build a config visually. See [DOCUMENTATION.md](
 
 - **Sidebar** — left or right, width in px or %, content alignment, the width above which it applies
 - **Placement** — three vertical bands (under the logo, centred, bottom) for the nav and for each header element: social, cart, account, button, search, language picker. Any of them can be hidden.
-- **Submenus** — caret, plus/minus, arrow or no icon; icon at the far edge, after the label or before it; one-open-at-a-time; auto-open the folder holding the current page; slide speed and indent
+- **Submenus** — caret, plus/minus, arrow or no icon; icon at the far edge, after the label or before it; one dropdown open at a time (default) or several; auto-open the folder holding the current page; slide speed and indent
 - **Mobile menu** — the same accordion controls, applied to Squarespace's own overlay menu
 - **Styling** — background, text colour, padding, spacing, nav size, logo width, edge border, hairlines between links, hover and current-page treatments
 
@@ -46,7 +46,9 @@ Open `config-generator.html` to build a config visually. See [DOCUMENTATION.md](
 
 Every nav link and folder is read from your header as it stands, so adding a page in Squarespace adds it to the sidebar with nothing to configure. Fonts and colours are read off your real navigation links, so the sidebar matches your theme on any 7.1 template.
 
-Folders open on click, never on hover: each is a real `aria-expanded` button with `aria-controls`, Escape closes an open folder, the current page carries `aria-current="page"`, and visitors who ask for reduced motion get instant open/close instead of the slide.
+Folders open on click, never on hover, and one at a time by default — opening one closes the others, which you can turn off. Each is a real `aria-expanded` button with `aria-controls`, Escape closes an open folder, the current page carries `aria-current="page"`, and visitors who ask for reduced motion get instant open/close instead of the slide.
+
+Inside the Squarespace editor the plugin stands down so your real header stays editable.
 
 Below the breakpoint everything is put back exactly where Squarespace rendered it — same parent, same sibling order — so the mobile header is untouched.
 
