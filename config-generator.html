@@ -162,8 +162,11 @@
   .pv-cart svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5}
   .pv-login{font-size:13.45px;letter-spacing:-.03em}
   .pv-cta{display:flex;justify-content:var(--pv-just,flex-start);width:100%}
-  .pv-cta a{display:inline-block;border:1px solid currentColor;color:inherit;text-decoration:none;
-            padding:10px 22px;font-size:13.45px;letter-spacing:-.02em;white-space:nowrap;text-align:center}
+  .pv-cta a{display:inline-block;border:1px solid transparent;background:#d94339;color:#fff;
+            text-decoration:none;padding:10px 22px;font-size:13.45px;letter-spacing:-.02em;
+            white-space:nowrap;text-align:center}
+  /* 'Follow section' over the demo's dark hero: Squarespace's inverted button */
+  .pv-side.theme-follow .pv-cta a{background:#fff;border-color:#111;color:#111}
   .pv-side.ctafull .pv-cta a{width:100%;text-align:center}
 
   .pv-content{flex:1 1 auto;min-width:0}
@@ -460,6 +463,15 @@
             </div>
           </div>
 
+          <div class="row">
+            <label>Colour theme</label>
+            <div class="seg" id="segHeaderTheme">
+              <button class="on" data-v="auto" onclick="setSeg('styles.headerTheme',this)">Consistent</button>
+              <button data-v="keep" onclick="setSeg('styles.headerTheme',this)">Follow section</button>
+            </div>
+            <div class="hint">When your header sits over a dark hero, Squarespace repaints it — including your button — for that dark backdrop. Nothing sits behind a sidebar, so <b>Consistent</b> drops that and the sidebar looks the same on every page.</div>
+          </div>
+
           <div class="tog"><label>Button fills the width</label>
             <span class="sw"><input type="checkbox" id="ctaFullWidth" onchange="sync()"><span></span></span></div>
           <div class="hint">Off keeps the button exactly as it looks in your header. On stretches it to the column width.</div>
@@ -570,7 +582,7 @@ const st = {
   side:'left', align:'left', navPosition:'top',
   submenu:{ icon:'caret', iconPosition:'edge' },
   mobile:{ icon:'caret', iconPosition:'edge' },
-  styles:{ hover:'opacity', active:'bold' },
+  styles:{ hover:'opacity', active:'bold', headerTheme:'auto' },
   elements:{}
 };
 ELEMENTS.forEach(e => { st.elements[e.key] = e.def; });
@@ -707,6 +719,7 @@ function buildConfig(){
   if (st.styles.hover !== 'opacity') s.hover = st.styles.hover;
   if (st.styles.active !== 'bold') s.active = st.styles.active;
   if (chk('ctaFullWidth')) s.ctaFullWidth = true;
+  if (st.styles.headerTheme !== 'auto') s.headerTheme = st.styles.headerTheme;
   if (Object.keys(s).length) c.styles = s;
 
   if (!chk('clipOverflow')) c.clipOverflow = false;
@@ -836,6 +849,7 @@ function renderDesktop(){
   if (chk('border')) cls.push('bd');
   if (chk('dividers')) cls.push('divs');
   if (chk('ctaFullWidth')) cls.push('ctafull');
+  if (st.styles.headerTheme === 'keep') cls.push('theme-follow');
   cls.push('hov-' + st.styles.hover, 'act-' + st.styles.active);
 
   const html =

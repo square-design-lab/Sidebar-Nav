@@ -100,7 +100,14 @@
       active: 'bold',          // 'bold' | 'underline' | 'dot' | 'none'
       // Off keeps the button identical to the one in your header. On stretches
       // it to the column width, which changes its proportions.
-      ctaFullWidth: false
+      ctaFullWidth: false,
+
+      // A header that overlays a dark hero borrows that section's colour theme,
+      // which repaints the button and the icons for a dark backdrop the sidebar
+      // does not have. 'auto' drops a theme that came from the overlaid section
+      // so every page looks the same; 'keep' leaves Squarespace alone; any
+      // theme name (e.g. 'light', 'dark') pins that theme instead.
+      headerTheme: 'auto'      // 'auto' | 'keep' | '<theme name>'
     },
 
     // Squarespace pads the first section by the header height so a fixed top
@@ -513,6 +520,76 @@
     r.setProperty('--sdlsn-m-icon-size', m.iconSize + 'px');
   }
 
+  /* ------------------------------------------------------------------ */
+  /*  SECTION THEME                                                     */
+  /* ------------------------------------------------------------------ */
+
+  /* Squarespace gives an overlaying header the colour theme of the section
+     underneath it — on a dark hero the header goes `data-section-theme="dark"`,
+     which repaints the CTA white-on-black and the icons light. A sidebar has no
+     section underneath, so that theme is always the wrong one: the same button
+     came out white on the home page and brand red everywhere else.
+
+     A theme that matches the first section's is the overlay's, so it is dropped
+     and the header falls back to its default presentation — exactly how it
+     renders on a page where it overlays nothing. A theme that differs was
+     configured on the header itself and is left alone. */
+  var themeMemo = null;
+
+  function applyHeaderTheme(h) {
+    var mode = cfg.styles.headerTheme || 'auto';
+    if (mode === 'keep' || !h) return;
+    var attr = h.getAttribute('data-section-theme') || '';
+
+    if (mode !== 'auto') {
+      themeMemo = { attr: attr, hadClass: !!attr && h.classList.contains(attr), forced: mode };
+      if (attr) h.classList.remove(attr);
+      h.setAttribute('data-section-theme', mode);
+      h.classList.add(mode);
+      return;
+    }
+
+    if (!attr) return;
+    var page = q('#page') || q('main');
+    var firstSec = page && q('[data-section-theme]', page);
+    if (!firstSec || firstSec.getAttribute('data-section-theme') !== attr) return;
+
+    themeMemo = { attr: attr, hadClass: h.classList.contains(attr), forced: null };
+    h.removeAttribute('data-section-theme');
+    h.classList.remove(attr);
+  }
+
+  function restoreHeaderTheme() {
+    var h = header();
+    if (!themeMemo || !h) { themeMemo = null; return; }
+    if (themeMemo.forced) h.classList.remove(themeMemo.forced);
+    if (themeMemo.attr) h.setAttribute('data-section-theme', themeMemo.attr);
+    else h.removeAttribute('data-section-theme');
+    if (themeMemo.hadClass) h.classList.add(themeMemo.attr);
+    themeMemo = null;
+  }
+
+  /* A dynamic header re-themes itself as sections pass behind it, so hold the
+     decision rather than making it once. Re-stripping produces no further
+     mutation to react to, so this cannot loop. */
+  function watchHeaderTheme(h) {
+    if (!window.MutationObserver || cfg.styles.headerTheme === 'keep') return null;
+    var mo = new MutationObserver(function () {
+      if (!shell) return;
+      var el = header();
+      if (!el) return;
+      if (!themeMemo) { applyHeaderTheme(el); return; }
+      if (themeMemo.forced) return;
+      if (el.getAttribute('data-section-theme') === themeMemo.attr ||
+          el.classList.contains(themeMemo.attr)) {
+        el.removeAttribute('data-section-theme');
+        el.classList.remove(themeMemo.attr);
+      }
+    });
+    mo.observe(h, { attributes: true, attributeFilter: ['class', 'data-section-theme'] });
+    return mo;
+  }
+
   function applyFlags() {
     var c = document.documentElement.classList;
     var s = cfg.styles;
@@ -624,6 +701,9 @@
     var box = desktopBox();
     if (!h || !box || shell) return;
 
+    // Settle the theme first: the colour fallbacks below read off the header.
+    applyHeaderTheme(h);
+
     var t = captureTokens();          // must run before the nav is hidden
     applyVars(t);
     applyFlags();
@@ -717,6 +797,7 @@
 
     box.appendChild(shell);
     document.documentElement.classList.add('sdlsn-on');
+    shell.__themeWatch = watchHeaderTheme(h);
 
     if (bar && window.ResizeObserver) {
       shell.__ro = new ResizeObserver(function () {
@@ -729,7 +810,9 @@
   function unmount() {
     if (!shell) return;
     if (shell.__ro) { shell.__ro.disconnect(); shell.__ro = null; }
+    if (shell.__themeWatch) { shell.__themeWatch.disconnect(); shell.__themeWatch = null; }
     document.documentElement.classList.remove('sdlsn-on');
+    restoreHeaderTheme();
     restoreAll();
     if (shell.parentNode) shell.parentNode.removeChild(shell);
     shell = null;

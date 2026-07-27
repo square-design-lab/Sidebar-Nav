@@ -112,12 +112,23 @@ The mobile header itself is left exactly as Squarespace built it. Only folders c
 | `hover` | `'opacity'` | `'opacity'`, `'underline'`, `'none'`. |
 | `active` | `'bold'` | Current page: `'bold'`, `'underline'`, `'dot'`, `'none'`. |
 | `ctaFullWidth` | `false` | `false` keeps the button identical to the one in your header. `true` stretches it to the column width. |
+| `headerTheme` | `'auto'` | What to do with the colour theme a header picks up from the section it overlays. `'auto'` drops it so the sidebar looks the same on every page; `'keep'` leaves Squarespace alone; a theme name (`'light'`, `'dark'`, …) pins that theme. See *Dynamic headers* below. |
 
 ### Dynamic headers
 
 If your header is set to overlay your sections (`data-header-style="dynamic"`), Squarespace recolours its text to suit whichever section is passing behind it — cream over a dark hero, near-black over a light one.
 
-A sidebar has no section behind it; it sits on the page background. Inheriting that live colour is therefore wrong by design, and on a light site it lands on cream-on-cream. The plugin instead reads `--solidHeaderNavigationColor` and `--solidHeaderBackgroundColor` — the pair Squarespace uses when the header is *not* overlaying anything — and pins them onto the moved elements so later recolouring cannot undo it. Buttons keep their own theme fill and border.
+A sidebar has no section behind it; it sits on the page background. Inheriting that live colour is therefore wrong by design, and on a light site it lands on cream-on-cream. The plugin instead reads `--solidHeaderNavigationColor` and `--solidHeaderBackgroundColor` — the pair Squarespace uses when the header is *not* overlaying anything — and pins them onto the moved elements so later recolouring cannot undo it.
+
+The same thing happens to your **button**, one level up: Squarespace puts the overlaid section's `data-section-theme` on the header, and the theme CSS repaints the button for that backdrop. On the test site the identical button rendered white on the home page (over a dark hero) and brand red on every other page.
+
+`styles.headerTheme` decides what to do about it:
+
+- `'auto'` (default) — if the header's theme is the same as the first section's, it came from the overlay, so it is dropped and the header falls back to the presentation it has on a page where it overlays nothing. A theme that *differs* was configured on the header itself and is left alone.
+- `'keep'` — leave Squarespace's theme in place.
+- a theme name — pin that theme.
+
+The choice is held by a `MutationObserver`, since a dynamic header re-themes itself while you scroll.
 
 ---
 
