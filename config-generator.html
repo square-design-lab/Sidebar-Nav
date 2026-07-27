@@ -327,8 +327,9 @@
               <input type="number" id="duration" value="280" min="0" max="1200" step="20" oninput="sync()"></div>
           </div>
 
-          <div class="tog"><label>One folder open at a time</label>
-            <span class="sw"><input type="checkbox" id="singleOpen" onchange="sync()"><span></span></span></div>
+          <div class="tog"><label>One dropdown open at a time</label>
+            <span class="sw"><input type="checkbox" id="singleOpen" checked onchange="sync()"><span></span></span></div>
+          <div class="hint">On, opening a folder closes the others. Off lets several stay open at once.</div>
           <div class="tog"><label>Open the folder holding this page</label>
             <span class="sw"><input type="checkbox" id="openActive" checked onchange="sync()"><span></span></span></div>
           <div class="hint">Visitors landing on a sub-page can see where they are without hunting for it.</div>
@@ -376,8 +377,8 @@
               <div class="row"><label>Slide speed (ms)</label>
                 <input type="number" id="mDuration" value="280" min="0" max="1200" step="20" oninput="sync()"></div>
             </div>
-            <div class="tog"><label>One folder open at a time</label>
-              <span class="sw"><input type="checkbox" id="mSingleOpen" onchange="sync()"><span></span></span></div>
+            <div class="tog"><label>One dropdown open at a time</label>
+              <span class="sw"><input type="checkbox" id="mSingleOpen" checked onchange="sync()"><span></span></span></div>
             <div class="tog"><label>Open the folder holding this page</label>
               <span class="sw"><input type="checkbox" id="mOpenActive" onchange="sync()"><span></span></span></div>
           </div>
@@ -663,7 +664,7 @@ function buildConfig(){
   if (st.submenu.icon !== 'caret') sm.icon = st.submenu.icon;
   if (st.submenu.iconPosition !== 'edge') sm.iconPosition = st.submenu.iconPosition;
   if (num('iconSize') !== 13) sm.iconSize = num('iconSize');
-  if (chk('singleOpen')) sm.singleOpen = true;
+  if (!chk('singleOpen')) sm.singleOpen = false;
   if (!chk('openActive')) sm.openActive = false;
   if (num('duration') !== 280) sm.duration = num('duration');
   if (num('indent') !== 16) sm.indent = num('indent');
@@ -676,7 +677,7 @@ function buildConfig(){
     if (st.mobile.icon !== 'caret') m.icon = st.mobile.icon;
     if (st.mobile.iconPosition !== 'edge') m.iconPosition = st.mobile.iconPosition;
     if (num('mIconSize') !== 15) m.iconSize = num('mIconSize');
-    if (chk('mSingleOpen')) m.singleOpen = true;
+    if (!chk('mSingleOpen')) m.singleOpen = false;
     if (chk('mOpenActive')) m.openActive = true;
     if (num('mIndent') !== 18) m.indent = num('mIndent');
     if (num('mSubScale') !== 0.82) m.subScale = num('mSubScale');

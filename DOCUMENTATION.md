@@ -22,7 +22,7 @@ Everything is optional. Set only what you want to differ from the defaults below
 | `align` | `'left'` | `'left'`, `'center'` or `'right'` — horizontal alignment of everything in the column. |
 | `navPosition` | `'top'` | Which vertical band the nav sits in: `'top'` (under the logo), `'center'`, `'bottom'`. |
 | `clipOverflow` | `true` | Clips sideways overflow on the page wrapper. Stops the horizontal scrollbar that a full-bleed section sized in `vw` can cause. Uses `overflow-x: clip`, which — unlike `hidden` — leaves `position: sticky` working. |
-| `skipInEditor` | `true` | Stand down while the Squarespace editor is in edit mode, so the header stays editable. |
+| `skipInEditor` | `true` | Stand down inside the Squarespace editor so the real header stays editable. Detected from Squarespace's edit-mode classes *and* from the site being framed by `squarespace.com`, and tracked live — entering or leaving edit mode without a reload takes effect immediately. |
 | `clearFirstSectionPadding` | `true` | Clears the top padding Squarespace puts on the first section. Its header controller sets that padding to the header's measured height so a fixed top bar cannot cover the section — with a full-height sidebar that becomes the entire viewport. |
 
 ### `breakpoint` and your site
@@ -62,7 +62,7 @@ elements: { social: 'bottom', cart: 'top', account: 'hide', cta: 'center' }
 | `icon` | `'caret'` | `'caret'` (rotates), `'plus'` (becomes a minus), `'arrow'` (turns down), `'none'`. |
 | `iconPosition` | `'edge'` | `'edge'` pins it to the far side of the column, `'inline'` puts it after the label, `'left'` before it. |
 | `iconSize` | `13` | px. |
-| `singleOpen` | `false` | `true` closes the other folders when one opens. |
+| `singleOpen` | `true` | One dropdown open at a time — opening a folder closes the others. Set `false` to allow several open at once. |
 | `openActive` | `true` | Open the folder containing the current page on load. |
 | `duration` | `280` | Slide duration in ms. |
 | `indent` | `16` | px the sub-items are indented. Ignored when `align` is centre or right. |
@@ -82,7 +82,7 @@ The mobile header itself is left exactly as Squarespace built it. Only folders c
 | `icon` | `'caret'` |
 | `iconPosition` | `'edge'` |
 | `iconSize` | `15` |
-| `singleOpen` | `false` |
+| `singleOpen` | `true` |
 | `openActive` | `false` |
 | `indent` | `18` |
 | `subScale` | `0.82` |
@@ -94,8 +94,8 @@ The mobile header itself is left exactly as Squarespace built it. Only folders c
 
 | Option | Default | What it does |
 |---|---|---|
-| `background` | `''` | `''` reads your header's own background, then your site background. Set a colour to override. A full-height column needs a solid fill. |
-| `textColor` | `''` | `''` follows the header text colour. |
+| `background` | `''` | `''` reads Squarespace's `--solidHeaderBackgroundColor` — the fill your header uses when it is *not* overlaying a section — then falls back to the header's own background and your site background. Set a colour to override. |
+| `textColor` | `''` | `''` reads `--solidHeaderNavigationColor`. See *Dynamic headers* below for why the live header colour is not used. |
 | `paddingX` | `32` | Side padding, px. |
 | `paddingY` | `32` | Top and bottom padding, px. |
 | `zoneGap` | `26` | Space between the logo, nav and action blocks, px. |
@@ -112,6 +112,12 @@ The mobile header itself is left exactly as Squarespace built it. Only folders c
 | `hover` | `'opacity'` | `'opacity'`, `'underline'`, `'none'`. |
 | `active` | `'bold'` | Current page: `'bold'`, `'underline'`, `'dot'`, `'none'`. |
 | `ctaFullWidth` | `false` | `false` keeps the button identical to the one in your header. `true` stretches it to the column width. |
+
+### Dynamic headers
+
+If your header is set to overlay your sections (`data-header-style="dynamic"`), Squarespace recolours its text to suit whichever section is passing behind it — cream over a dark hero, near-black over a light one.
+
+A sidebar has no section behind it; it sits on the page background. Inheriting that live colour is therefore wrong by design, and on a light site it lands on cream-on-cream. The plugin instead reads `--solidHeaderNavigationColor` and `--solidHeaderBackgroundColor` — the pair Squarespace uses when the header is *not* overlaying anything — and pins them onto the moved elements so later recolouring cannot undo it. Buttons keep their own theme fill and border.
 
 ---
 
@@ -146,7 +152,7 @@ window.SDL_SIDEBAR_NAV.destroy()   // restore the native header
 
 **A section pokes out sideways, or a horizontal scrollbar appears.** Leave `clipOverflow` on.
 
-**The sidebar has no background.** Your header is set to overlay the page, so it has no fill of its own and the plugin falls back to your site background. Set `styles.background` if you want something else.
+**The sidebar has no background, or the logo is invisible.** Your header is set to overlay the page. See *Dynamic headers* above — the plugin already prefers the solid-header colours, but if your theme leaves those unset, pin them with `styles.background` and `styles.textColor`.
 
 **Nothing happens.** The plugin needs a Squarespace 7.1 header (`#header` with `.header-display-desktop`). It also stands down inside the editor while you are editing — check the live site.
 

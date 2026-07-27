@@ -49,8 +49,30 @@ html.sdlsn-on .header {
   display: block !important;
   transform: none !important;
   transition: none !important;
-  background: var(--sdlsn-bg, transparent);
-  color: var(--sdlsn-fg, inherit);
+  background: var(--sdlsn-bg, transparent) !important;
+  color: var(--sdlsn-fg, inherit) !important;
+}
+
+/* A `data-header-style="dynamic"` header keeps recolouring its own text to suit
+   the section scrolling behind it. Nothing scrolls behind a sidebar, so those
+   swaps only ever produce the wrong colour — cream on a cream column. Pin the
+   moved Squarespace elements to the resolved sidebar colour. Buttons are left
+   alone: they carry their own theme fill and border. */
+html.sdlsn-on .sdlsn,
+html.sdlsn-on .sdlsn .header-title,
+html.sdlsn-on .sdlsn .header-title-text a,
+html.sdlsn-on .sdlsn .header-title-logo a,
+html.sdlsn-on .sdlsn .user-accounts-link a,
+html.sdlsn-on .sdlsn .user-accounts-link span,
+html.sdlsn-on .sdlsn .header-actions-action--cart a,
+html.sdlsn-on .sdlsn .header-actions-action--cart span,
+html.sdlsn-on .sdlsn .header-actions-action--social a,
+html.sdlsn-on .sdlsn .header-actions-action--search a,
+html.sdlsn-on .sdlsn .sdlsn__link,
+html.sdlsn-on .sdlsn .sdlsn__folderlink,
+html.sdlsn-on .sdlsn .sdlsn__disclosure,
+html.sdlsn-on .sdlsn .sdlsn__sublink {
+  color: var(--sdlsn-fg, currentColor) !important;
 }
 
 html.sdlsn-on.sdlsn-side-right #header,

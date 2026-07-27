@@ -56,7 +56,9 @@
       icon: 'caret',           // 'caret' | 'plus' | 'arrow' | 'none'
       iconPosition: 'edge',    // 'edge' | 'inline' | 'left'
       iconSize: 13,
-      singleOpen: false,       // only one folder open at a time
+      // One folder open at a time. A vertical list is read top to bottom, and
+      // several open folders push later links far down the column.
+      singleOpen: true,
       openActive: true,        // open the folder holding the current page
       duration: 280,
       indent: 16,
@@ -68,7 +70,7 @@
       icon: 'caret',
       iconPosition: 'edge',
       iconSize: 15,
-      singleOpen: false,
+      singleOpen: true,
       openActive: false,
       indent: 18,
       subScale: 0.82,
@@ -383,7 +385,27 @@
 
   function isTransparent(c) {
     c = (c || '').trim();
-    return !c || c === 'transparent' || /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0?\.?0*\s*\)/.test(c);
+    if (!c || c === 'transparent' || c === 'none') return true;
+    // rgba(…, 0) / hsla(…, 0) in any notation
+    return /^(rgba|hsla)\([^)]*[,/]\s*0*\.?0+\s*\)$/i.test(c);
+  }
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  /* Resolve any CSS colour notation to rgb()/rgba() so it can be picked apart. */
+  function resolveColor(v) {
+    if (!v) return '';
+    var probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+    probe.style.color = '';
+    probe.style.color = v;
+    if (!probe.style.color) return '';
+    document.documentElement.appendChild(probe);
+    var out = getComputedStyle(probe).color;
+    probe.parentNode.removeChild(probe);
+    return out;
   }
 
   function rgbaFrom(color, alpha) {
@@ -416,21 +438,31 @@
       t.lh = c.lineHeight === 'normal' ? '1.35' : c.lineHeight;
     }
 
-    t.fg = cfg.styles.textColor || (h ? getComputedStyle(h).color : '');
+    /* Colour needs care. A 7.1 header can be `data-header-style="dynamic"`,
+       which recolours its text to suit whichever section is passing behind it
+       — cream over a dark hero, near-black over a light one. The sidebar has no
+       section behind it, it sits on the page background, so inheriting that
+       live colour is wrong by design and lands on cream-on-cream.
+       `--solidHeader*` is exactly the pair Squarespace uses when the header is
+       NOT overlaying anything, which is our situation. */
+    var fg = cfg.styles.textColor ||
+      cssVar('--solidHeaderNavigationColor') ||
+      cssVar('--navigationLinkColor');
+    if (isTransparent(fg)) fg = h ? getComputedStyle(h).color : '';
+    t.fg = resolveColor(fg) || fg;
 
     var bg = cfg.styles.background;
-    if (!bg) {
+    if (isTransparent(bg)) bg = cssVar('--solidHeaderBackgroundColor');
+    if (isTransparent(bg)) {
       var bgNode = h && q('.header-background', h);
       bg = bgNode ? getComputedStyle(bgNode).backgroundColor : '';
-      if (isTransparent(bg) && h) bg = getComputedStyle(h).backgroundColor;
-      if (isTransparent(bg)) {
-        bg = getComputedStyle(document.documentElement)
-          .getPropertyValue('--siteBackgroundColor').trim();
-      }
-      if (isTransparent(bg)) bg = getComputedStyle(document.body).backgroundColor;
-      if (isTransparent(bg)) bg = '#ffffff';
     }
-    t.bg = bg;
+    if (isTransparent(bg) && h) bg = getComputedStyle(h).backgroundColor;
+    if (isTransparent(bg)) bg = cssVar('--siteBackgroundColor');
+    if (isTransparent(bg)) bg = getComputedStyle(document.body).backgroundColor;
+    if (isTransparent(bg)) bg = '#ffffff';
+    t.bg = resolveColor(bg) || bg;
+
     t.border = cfg.styles.borderColor || rgbaFrom(t.fg, 0.14);
     return t;
   }
@@ -833,10 +865,38 @@
   /*  BOOT                                                              */
   /* ------------------------------------------------------------------ */
 
+  /* True while the site is being edited in Squarespace, so the plugin can stand
+     down and leave the real header editable.
+
+     Two independent signals, because neither alone is reliable:
+       1. Edit-mode classes — definitive, but only once editing actually starts.
+       2. Being framed by squarespace.com — the editor renders the site in an
+          iframe on the /config URL. `ancestorOrigins` reports the parent origin
+          even cross-origin; `document.referrer` is the fallback for browsers
+          that do not implement it. */
+  function framedBySquarespace() {
+    if (window.self === window.top) return false;
+    var host = /(^|\.)squarespace\.com$/;
+    try {
+      var ao = location.ancestorOrigins;
+      if (ao && ao.length) {
+        for (var i = 0; i < ao.length; i++) {
+          if (host.test(new URL(ao[i]).hostname)) return true;
+        }
+        return false;
+      }
+    } catch (e) { /* fall through to the referrer */ }
+    try {
+      return !!document.referrer && host.test(new URL(document.referrer).hostname);
+    } catch (e) { return false; }
+  }
+
   function editing() {
-    return document.documentElement.classList.contains('sqs-edit-mode') ||
-      document.body.classList.contains('sqs-edit-mode-active') ||
-      !!q('.sqs-editing-overlay');
+    var d = document.documentElement, b = document.body;
+    if (d.classList.contains('sqs-edit-mode') || d.classList.contains('sqs-edit-mode-active')) return true;
+    if (b && (b.classList.contains('sqs-edit-mode-active') || b.classList.contains('sqs-edit-mode'))) return true;
+    if (q('.sqs-editing-overlay') || q('.sqs-block-editor-overlay') || q('#sqs-cmp-loader')) return true;
+    return framedBySquarespace();
   }
 
   function start() {
@@ -861,13 +921,18 @@
       raf = requestAnimationFrame(function () { raf = null; sync(); });
     });
 
-    // Stand down if the visitor turns out to be editing the page.
+    // Edit mode can be entered and left without a reload, so track it both ways.
     if (cfg.skipInEditor && window.MutationObserver) {
-      new MutationObserver(function () {
-        if (!editing()) return;
-        unmount();
-        teardownMobile();
-      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      var wasEditing = false;
+      var watch = new MutationObserver(function () {
+        var now = editing();
+        if (now === wasEditing) return;
+        wasEditing = now;
+        if (now) { unmount(); teardownMobile(); }
+        else sync();
+      });
+      watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      watch.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     }
 
     // 7.1 finishes hydrating the header after first paint (cart quantity, social
