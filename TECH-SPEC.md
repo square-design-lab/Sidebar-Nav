@@ -74,10 +74,10 @@ homes.push({ node, parent: node.parentNode, next: node.nextSibling });
 
 Useful facts:
 
-- `#header` is `position: fixed; z-index: 10` with `data-header-style="theme"`, and `#page` carries **no** compensating top offset — the header overlays the content. So hiding it needs no layout correction.
+- `#header` is `position: fixed; z-index: 10` with `data-header-style="dynamic"`, and `#page` carries no padding of its own — the header overlays the content. Clearance comes from an inline `padding-top` on the *first section*, which matters a lot (see below).
 - Folder titles are `<button data-href>`, not links. 7.1 folders are containers, not pages, so the plugin renders a button and never a link — unless the title really is an `<a href>`, in which case it splits into a link plus its own disclosure button.
 - The desktop nav is `inline-flex` with no gap; spacing comes from item margins.
-- 7.1 exposes `--site-navigation-font-*`, `--siteBackgroundColor`, `--solidHeaderBackgroundColor`, `--navigationLinkColor` on `:root`.
+- 7.1 exposes `--site-navigation-font-*`, `--siteBackgroundColor`, `--navigationLinkColor` and the `--solidHeader*` pair (`BackgroundColor`, `NavigationColor`) on `:root`. The `solidHeader` pair is the one to use — see *Dynamic headers* below.
 
 ---
 

@@ -760,14 +760,17 @@ function slide(btn, panel, open){
 }
 
 function wire(btn, panel, scope, group){
+  // Keep the pairing on the button: on mobile the panel is the sibling of the
+  // button's *wrapper*, not of the button, so walking the DOM to find it in the
+  // close-the-others loop silently targets the wrong element.
+  btn.__panel = panel;
   btn.onclick = () => {
     const open = btn.getAttribute('aria-expanded') === 'true';
     if (!open && group){
       group.querySelectorAll('[aria-expanded="true"]').forEach(o => {
-        if (o === btn) return;
-        const p = o.nextElementSibling;
+        if (o === btn || !o.__panel) return;
         pvOpen[scope][o.dataset.lbl] = false;
-        if (p) slide(o, p, false);
+        slide(o, o.__panel, false);
       });
     }
     pvOpen[scope][btn.dataset.lbl] = !open;
